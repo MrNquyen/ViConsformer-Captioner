@@ -1,0 +1,84 @@
+
+dataset_attributes:
+  image_features:
+    train: /datastore/npl/ViInfographicCaps/data/swintextspotter, /datastore/npl/ViInfographicCaps/data/yolo_object
+    val: /datastore/npl/ViInfographicCaps/data/swintextspotter, /datastore/npl/ViInfographicCaps/data/yolo_object
+    test: /datastore/npl/ViInfographicCaps/data/swintextspotter, /datastore/npl/ViInfographicCaps/data/yolo_object
+  imdb_files:
+    train: /datastore/npl/ViInfographicCaps/data/imdb/train_imdb_yolo_new.npy
+    val: /datastore/npl/ViInfographicCaps/data/imdb/val_imdb_yolo_new.npy
+    test: /datastore/npl/ViInfographicCaps/data/imdb/test_imdb_yolo_new.npy
+  depth_features:
+    ocr_depth: /datastore/npl/ViInfographicCaps/data/data/depth_features/swintext_ocr_depth
+    obj_depth: /datastore/npl/ViInfographicCaps/data/data/depth_features/yolo_depth
+  clip_features:
+    images_features: /datastore/npl/ViInfographicCaps/data/data/clip/images_feat
+  object_concepts:
+    object_concepts_en: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_en.txt
+    object_concepts_vi: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_vi.txt
+    
+
+model_attributes:
+  image_dir: /datastore/npl/ViInfographicCaps/data/images
+  model_clip: /datastore/npl/ViInfographicCaps/model/clip-vit-large-patch14
+  fasttext_bin: ./utils/fasttext/wiki.vi.bin
+  object_concepts: 
+  model_decoder: /datastore/npl/ViInfographicCaps/model/phobert-base
+  hidden_size: 768
+  ocr:
+    dim: 256
+    num_ocr: 100
+  obj:
+    dim: 320
+    num_obj: 100
+  feature_dim: 2048 # d
+  defum:
+    num_layers: 2 
+    activation: relu
+    nhead: 8
+  svoce:
+    top_k: 15
+    vocab_path_en: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_en.txt
+    vocab_path_vi: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_vi.txt
+    object_concepts_features: /datastore/npl/ViInfographicCaps/data/data/clip/open_image_feat
+    
+  mutimodal_transformer:
+    num_layers: 4
+    nhead: 12
+    max_length: 32
+    dropout: 0.1
+  text_embedding:
+    common_vocab: /datastore/npl/ViInfographicCaps/workspace/baseline/DEVICE/DEVICE-Image-Captioning/data/vocab.txt
+    max_length: 30
+    return_tensors: pt
+  adjust_optimizer:
+    lr_scale: 0.1 # scale lr for finetuning modules
+optimizer_attributes:
+  lr_scale: 0.1 # scale lr for finetuning modules
+  params:
+    eps: 1.0e-08
+    lr: 1.0e-4
+    weight_decay: 0.01
+  type: AdamW
+training_parameters:
+  epochs: 26
+  batch_size: 64
+  early_stopping:
+    patience: 5
+  lr_scheduler:
+    status: true
+    type: "step"
+    gamma : 0.1
+    lr_steps:
+      - 7000
+    lr_ratio: 0.1
+    use_warmup: True
+    warmup_iterations: 1
+    warmup_factor: 0.5
+  max_iterations: 9000
+  snapshot_interval: 1000
+  metric_minimize: false
+  seed: 2021
+
+
+    

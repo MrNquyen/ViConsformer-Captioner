@@ -1,0 +1,8 @@
+data
+projects/modules/multimodal_embedding_oldver.py
+trash.py
+test.py
+utils/fasttext/wiki.vi.bin
+utils/pycocoevalcap
+__pycache__
+build
