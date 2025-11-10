@@ -19,9 +19,12 @@ from icecream import ic
 class WordEmbedding(nn.Module):
     def __init__(self, model, tokenizer, text_embedding_config):
         super().__init__()
+        self.config = registry.get_config("model_attributes")["text_embedding"]
+        self.device = registry.get_args("device")
+        self.writer = registry.get_writer("common")
+        
         self.model = model
         self.tokenizer = tokenizer
-        self.config = text_embedding_config
         self.max_length = self.config["max_length"]
 
         vocab_path =self.config["common_vocab"]
@@ -232,7 +235,9 @@ class OCREmbedding(BaseEmbedding):
         #~ DEFUM (Find the correlation of the object with multiple ocr tokens)
         depth_aware_visual_feat = self.DeFUM(batch)
 
-        #~ SVOCE (Salient Visual Object Concepts Extractor)
+        #~ SgAM
+        semantic_ocr_tokens_feat, visual_object_concept_feat = self.SgAM(batch) 
 
-        #~ SgAM 
+        #~ Return 
+        return depth_aware_visual_feat, semantic_ocr_tokens_feat, visual_object_concept_feat
         

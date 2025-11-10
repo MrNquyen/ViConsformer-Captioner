@@ -36,7 +36,7 @@ class SelfAttention(nn.Module):
         Q = self.q_linear(Q_input)
         K = self.k_linear(K_input)
         V = self.v_linear(V_input)
-        QK = QK = torch.bmm(
+        QK = torch.bmm(
             Q, torch.transpose(K, 2, 1), 
         ) # BS, number_of_element_q, number_of_element_k
         A = QK / math.sqrt(self.input_size)
@@ -63,7 +63,7 @@ class DeFumAttention(nn.Module):
             K_input=visual_entity, 
             V_input=visual_entity
         )
-        scores = torch.bmm(F.softmax(A + relative_depth_map, dim=-1) + V)
+        scores = torch.bmm(F.softmax(A + relative_depth_map, dim=-1), V)
         scores = scores.masked_fill(attention_mask == 0, self._mask_value)
         return scores
 

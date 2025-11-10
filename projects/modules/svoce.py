@@ -34,7 +34,7 @@ class SVOCE(nn.Module):
             in_features=1,
             out_features=self.hidden_size
         )
-        self.LayerNorm = nn.LayerNorm(normalized_shape=self.self.hidden_size)
+        self.LayerNorm = nn.LayerNorm(normalized_shape=self.hidden_size)
         
     #-- BUILD
     def load(self):
@@ -109,6 +109,6 @@ class SVOCE(nn.Module):
         ) + self.LayerNorm(
             self.linear_score(top_k_concepts_scores)
         )
-        return visual_object_concept_feat
+        return visual_object_concept_feat, concepts_fasttext_feat
     
     

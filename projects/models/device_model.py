@@ -110,7 +110,6 @@ class DEVICE(BaseModel):
         self.word_embedding = WordEmbedding(
             model=self.pretrained_model,
             tokenizer=self.pretrained_tokenizer,
-            text_embedding_config=self.config["text_embedding"]
         )
 
         # Pointer-wise network
@@ -120,12 +119,7 @@ class DEVICE(BaseModel):
         )
 
     def build_decoder(self):
-        self.decoder = EncoderAsDecoder(
-            pretrained_model=self.pretrained_model,
-            config=self.config["mutimodal_transformer"],
-            roberta_config=self.roberta_config,
-            hidden_size=self.hidden_size
-        )
+        self.decoder = EncoderAsDecoder(pretrained_model=self.pretrained_model)
 
     def build_ouput(self):
         # Num choices = num vocab
@@ -149,6 +143,7 @@ class DEVICE(BaseModel):
         self.pretrained_model = roberta_model
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(self.roberta_model_name)
         self.roberta_config = roberta_config
+
 
     #---- ADJUST LR FOR SPECIFIC MODULES
     def adjust_lr(self):
@@ -237,18 +232,19 @@ class DEVICE(BaseModel):
         # self.writer.LOG_INFO(f"%=== Optimer params groups ===% \n {optimizer_param_groups}")
         return optimizer_param_groups
 
+
     # ---- FORWARD
     def forward_mmt(
-            self,
-            obj_embed,
-            obj_mask,
-            ocr_embed,
-            ocr_mask,
-            semantic_representation_ocr_tokens,
-            visual_concept_embed,
-            common_vocab_embed,
-            prev_inds,
-        ):
+        self,
+        ocr_embed,
+        obj_embed,
+        ocr_mask,
+        obj_mask,
+        semantic_ocr_tokens_feat,
+        visual_object_concept_feat,
+        common_vocab_embed,
+        prev_inds,
+    ):
         """
             Forward batch to model
         """
@@ -258,8 +254,8 @@ class DEVICE(BaseModel):
             obj_mask=obj_mask,
             ocr_embed=ocr_embed,
             ocr_mask=ocr_mask,
-            ocr_semantic_embed=semantic_representation_ocr_tokens,
-            visual_concept_embed=visual_concept_embed,
+            semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
+            visual_object_concept_feat=visual_object_concept_feat,
             common_vocab_embed=common_vocab_embed,
             prev_inds=prev_inds,
         )
@@ -282,34 +278,17 @@ class DEVICE(BaseModel):
 
 
     def forward(self, batch):
-        # batch = self.preprocess_batch(batch)
         batch = self.map_device(batch)
         batch = self.sync_ocr_obj(batch)
 
-        #-- OBJ Embedding
-        obj_embed = self.obj_embedding(
-            list_depth_images=batch["list_depth_images"], 
-            boxes=batch["list_obj_boxes"], 
-            obj_feats=batch["list_obj_feat"]
-        )
-
-        # -- OCR Embedding
-        ocr_embed, \
-        semantic_representation_ocr_tokens, \
-        visual_concept_embed = self.ocr_embedding(
-            list_depth_images=batch["list_depth_images"], 
-            ocr_boxes=batch["list_ocr_boxes"], 
-            ocr_feats=batch["list_ocr_feat"],
-            ocr_tokens=batch["list_ocr_tokens"],
-            ocr_conf=batch["list_ocr_scores"],
-            obj_boxes=batch["list_obj_boxes"], 
-            obj_feats=batch["list_obj_feat"]
-        )
-
-        # -- Common embed
-        common_vocab_embed = self.word_embedding.common_vocab.get_vocab_embedding()
+        #-- Forward to layer
+        ocr_mask = batch["ocr_mask"]
+        obj_mask = batch["obj_mask"]
+        obj_embed_feat = self.obj_embedding(batch)
+        depth_aware_visual_feat, semantic_ocr_tokens_feat, visual_object_concept_feat = self.ocr_embedding(batch)
+        common_vocab_embed = self.classifier.weight
         
-        # -- Training or Evaluating
+        #-- Training and Inference
         if self.training:
             #~ prev_inds
             caption_inds = self.word_embedding.get_prev_inds(
@@ -317,12 +296,12 @@ class DEVICE(BaseModel):
                 ocr_tokens=batch["list_ocr_tokens"]
             ).to(self.device)
             results = self.forward_mmt(
-                obj_embed=obj_embed,
-                obj_mask=batch["obj_mask"],
-                ocr_embed=ocr_embed,
-                ocr_mask=batch["ocr_mask"],
-                semantic_representation_ocr_tokens=semantic_representation_ocr_tokens,
-                visual_concept_embed=visual_concept_embed,
+                ocr_embed=depth_aware_visual_feat,
+                obj_embed=obj_embed_feat,
+                ocr_mask=ocr_mask,
+                obj_mask=obj_mask,
+                semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
+                visual_object_concept_feat=visual_object_concept_feat,
                 common_vocab_embed=common_vocab_embed,
                 prev_inds=caption_inds
             )
@@ -341,12 +320,12 @@ class DEVICE(BaseModel):
 
             for i in range(num_dec_step):
                 results = self.forward_mmt(
-                    obj_embed=obj_embed,
-                    obj_mask=batch["obj_mask"],
-                    ocr_embed=ocr_embed,
-                    ocr_mask=batch["ocr_mask"],
-                    semantic_representation_ocr_tokens=semantic_representation_ocr_tokens,
-                    visual_concept_embed=visual_concept_embed,
+                    ocr_embed=depth_aware_visual_feat,
+                    obj_embed=obj_embed_feat,
+                    ocr_mask=ocr_mask,
+                    obj_mask=obj_mask,
+                    semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
+                    visual_object_concept_feat=visual_object_concept_feat,
                     common_vocab_embed=common_vocab_embed,
                     prev_inds=prev_inds
                 )
@@ -369,6 +348,7 @@ class OcrPtrNet(nn.Module):
 
         self.query = nn.Linear(hidden_size, query_key_size)
         self.key = nn.Linear(hidden_size, query_key_size)
+
 
     def forward(self, query_inputs, key_inputs, attention_mask):
         """

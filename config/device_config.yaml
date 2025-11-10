@@ -17,7 +17,6 @@ dataset_attributes:
     object_concepts_en: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_en.txt
     object_concepts_vi: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_vi.txt
     
-
 model_attributes:
   image_dir: /datastore/npl/ViInfographicCaps/data/images
   model_clip: /datastore/npl/ViInfographicCaps/model/clip-vit-large-patch14
@@ -41,7 +40,6 @@ model_attributes:
     vocab_path_en: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_en.txt
     vocab_path_vi: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_vi.txt
     object_concepts_features: /datastore/npl/ViInfographicCaps/data/data/clip/open_image_feat
-    
   mutimodal_transformer:
     num_layers: 4
     nhead: 12
@@ -49,7 +47,7 @@ model_attributes:
     dropout: 0.1
   text_embedding:
     common_vocab: /datastore/npl/ViInfographicCaps/workspace/baseline/DEVICE/DEVICE-Image-Captioning/data/vocab.txt
-    max_length: 30
+    max_length: 32
     return_tensors: pt
   adjust_optimizer:
     lr_scale: 0.1 # scale lr for finetuning modules
