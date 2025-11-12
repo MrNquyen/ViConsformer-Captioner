@@ -234,24 +234,46 @@ class Trainer():
         # Padding ocr scores/ confidence
         ocr_score_pad = 0
         batch["list_ocr_scores"] = _batch_padding_string(batch["list_ocr_scores"], max_length=model_config["ocr"]["num_ocr"], pad_value=ocr_score_pad, return_mask=False)
+        batch["list_ocr_scores"] = torch.tensor(batch["list_ocr_scores"])
 
         # Depth Features 
         depth_pad = torch.zeros((1, 1))
             #~ For OBJ
         list_obj_depth_feat = batch["list_obj_depth_feat"]
+        list_obj_depth_feat = [
+            depth_value if len(depth_value) > 0 else [0.1]
+            for depth_value in list_obj_depth_feat
+        ]
         list_obj_depth_feat = [torch.tensor(depth_feat).unsqueeze(-1) for depth_feat in list_obj_depth_feat]
-        batch["list_obj_depth_feat"] = _batch_padding([list_obj_depth_feat], model_config["obj"]["num_obj"], depth_pad, return_mask=False)
+        batch["list_obj_depth_feat"] = _batch_padding(list_obj_depth_feat, model_config["obj"]["num_obj"], depth_pad, return_mask=False)
 
             #~ For OCR
         list_ocr_depth_feat = batch["list_ocr_depth_feat"]
+        list_ocr_depth_feat = [
+            depth_value if len(depth_value) > 0 else [0.1]
+            for depth_value in list_ocr_depth_feat
+        ]
         list_ocr_depth_feat = [torch.tensor(depth_feat).unsqueeze(-1) for depth_feat in list_ocr_depth_feat]
-        batch["list_ocr_depth_feat"] = _batch_padding([list_ocr_depth_feat], model_config["ocr"]["num_ocr"], depth_pad, return_mask=False)
+        batch["list_ocr_depth_feat"] = _batch_padding(list_ocr_depth_feat, model_config["ocr"]["num_ocr"], depth_pad, return_mask=False)
 
         # CLIP Feat
         list_clip_image_feat = batch["list_clip_image_feat"]
         list_clip_image_feat = torch.tensor(list_clip_image_feat).unsqueeze(1)
         batch["list_clip_image_feat"] = list_clip_image_feat
 
+        return batch
+    
+    def match_device(self, batch):
+        batch["list_ocr_boxes"] = batch["list_ocr_boxes"].to(self.device).to(torch.float)
+        batch["list_ocr_feat"] = batch["list_ocr_feat"].to(self.device).to(torch.float)
+        batch["ocr_mask"] = batch["ocr_mask"].to(self.device).to(torch.float)
+        batch["list_obj_boxes"] = batch["list_obj_boxes"].to(self.device).to(torch.float)
+        batch["list_obj_feat"] = batch["list_obj_feat"].to(self.device).to(torch.float)
+        batch["obj_mask"] = batch["obj_mask"].to(self.device).to(torch.float)
+        batch["list_obj_depth_feat"] = batch["list_obj_depth_feat"].to(self.device).to(torch.float)
+        batch["list_ocr_depth_feat"] = batch["list_ocr_depth_feat"].to(self.device).to(torch.float)
+        batch["list_clip_image_feat"] = batch["list_clip_image_feat"].to(self.device).to(torch.float)
+        batch["list_ocr_scores"] = batch["list_ocr_scores"].to(self.device).to(torch.float)
         return batch
 
 
@@ -270,6 +292,7 @@ class Trainer():
             for batch_id, batch in tqdm(enumerate(self.train_loader), desc="Iterating through train loader"):
                 self.writer.LOG_INFO(f"Training batch: {batch_id + 1}")
                 batch = self.preprocess_batch(batch)
+                batch = self.match_device(batch)
                 list_ocr_tokens = batch["list_ocr_tokens"]
                 list_captions = batch["list_captions"]
 

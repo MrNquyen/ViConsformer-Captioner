@@ -1,4 +1,5 @@
 import os
+import math
 import torch
 import numpy as np
 from torch import nn
@@ -14,8 +15,6 @@ class SgAM(nn.Module):
     def __init__(self):
         super().__init__()
         self.config = registry.get_config("model_attributes")
-        self.sgam_config = self.config["sgam"]
-        self.dataset_attributes_config = self.config["dataset_attributes"]
         self.device = registry.get_args("device")
         self.writer = registry.get_writer("common")
 

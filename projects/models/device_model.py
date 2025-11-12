@@ -7,7 +7,7 @@ from PIL import Image
 from icecream import ic
 from transformers import CLIPProcessor, CLIPModel
 from torch.nn import functional as F
-from projects.modules.multimodal_embedding_v2 import ObjEmbedding, OCREmbedding, Sync, WordEmbedding
+from projects.modules.multimodal_embedding import ObjEmbedding, OCREmbedding, Sync, WordEmbedding
 from projects.modules.decoder import EncoderAsDecoder 
 from utils.configs import Config
 from utils.registry import registry
@@ -119,7 +119,10 @@ class DEVICE(BaseModel):
         )
 
     def build_decoder(self):
-        self.decoder = EncoderAsDecoder(pretrained_model=self.pretrained_model)
+        self.decoder = EncoderAsDecoder(
+            pretrained_model=self.pretrained_model,
+            roberta_config=self.roberta_config
+        )
 
     def build_ouput(self):
         # Num choices = num vocab
@@ -285,7 +288,7 @@ class DEVICE(BaseModel):
         ocr_mask = batch["ocr_mask"]
         obj_mask = batch["obj_mask"]
         obj_embed_feat = self.obj_embedding(batch)
-        depth_aware_visual_feat, semantic_ocr_tokens_feat, visual_object_concept_feat = self.ocr_embedding(batch)
+        ocr_feat_embed, semantic_ocr_tokens_feat, visual_object_concept_feat = self.ocr_embedding(batch)
         common_vocab_embed = self.classifier.weight
         
         #-- Training and Inference
@@ -296,7 +299,7 @@ class DEVICE(BaseModel):
                 ocr_tokens=batch["list_ocr_tokens"]
             ).to(self.device)
             results = self.forward_mmt(
-                ocr_embed=depth_aware_visual_feat,
+                ocr_embed=ocr_feat_embed,
                 obj_embed=obj_embed_feat,
                 ocr_mask=ocr_mask,
                 obj_mask=obj_mask,
@@ -320,7 +323,7 @@ class DEVICE(BaseModel):
 
             for i in range(num_dec_step):
                 results = self.forward_mmt(
-                    ocr_embed=depth_aware_visual_feat,
+                    ocr_embed=ocr_feat_embed,
                     obj_embed=obj_embed_feat,
                     ocr_mask=ocr_mask,
                     obj_mask=obj_mask,

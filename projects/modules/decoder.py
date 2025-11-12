@@ -7,6 +7,7 @@ import math
 from icecream import ic
 
 from utils.module_utils import _batch_gather, _get_causal_mask
+from utils.registry import registry
 from utils.utils import load_vocab
 from projects.modules.multimodal_embedding import WordEmbedding, ObjEmbedding, OCREmbedding
 from transformers import RobertaPreTrainedModel, RobertaConfig
@@ -118,7 +119,7 @@ class PrevEmbedding(nn.Module):
 
 # ---------- Encoder as Decoder
 class EncoderAsDecoder(RobertaPreTrainedModel):
-    def __init__(self, pretrained_model, config, roberta_config, hidden_size, **kwargs):
+    def __init__(self, pretrained_model, roberta_config, **kwargs):
         """
             Parameters:
             ----------
@@ -127,10 +128,11 @@ class EncoderAsDecoder(RobertaPreTrainedModel):
 
         """
         super().__init__(roberta_config)
+        self.config = registry.get_config("model_attributes")
+        self.mmt_config = registry.get_config("model_attributes")["mutimodal_transformer"]
         self.pretrained_model = pretrained_model
         self.encoder = self.pretrained_model.encoder
-        self.hidden_size = hidden_size
-        self.config = config
+        self.hidden_size = self.config["hidden_size"]
         self.kwargs = kwargs
         # Build
         self.build()
@@ -139,7 +141,7 @@ class EncoderAsDecoder(RobertaPreTrainedModel):
         fastext_dim = 300
         self.ocr_semantic_linear = nn.Linear(
             in_features=fastext_dim,
-            out_features=hidden_size
+            out_features=self.hidden_size
         )
     
     def build(self):
@@ -151,7 +153,7 @@ class EncoderAsDecoder(RobertaPreTrainedModel):
         # Prev Embedding
         self.prev_embedding = PrevEmbedding(
             hidden_size=self.hidden_size,
-            mutimodal_transformer_config=self.config
+            mutimodal_transformer_config=self.mmt_config
         )
 
 

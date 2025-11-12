@@ -15,7 +15,6 @@ class ViInforgraphicDataset(Dataset):
 
         #-- Load features directory
         ocr_feat_dir, obj_feat_dir = dataset_config["image_features"][split].split(", ")
-        depth_images_dir = dataset_config["depth_images_dir"]
         imdb_path = dataset_config["imdb_files"][split]
 
         depth_feat_dir = dataset_config["depth_features"]

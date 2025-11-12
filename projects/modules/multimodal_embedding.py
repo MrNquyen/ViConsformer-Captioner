@@ -3,9 +3,8 @@ import fasttext
 from torch import nn
 from typing import List
 
-from projects.modules.convert_depth_map import DepthExtractor, DepthExtractorDirect
-from projects.modules.depth_enhance_update import DeFUM
-from projects.modules.semantic_guide_alignment import SgAM
+from projects.modules.defum import DeFUM
+from projects.modules.sgam import SgAM
 from utils.module_utils import fasttext_embedding_module, _batch_padding_string
 from utils.phoc.build_phoc_v2 import build_phoc
 from utils.registry import registry
@@ -16,8 +15,27 @@ from icecream import ic
 
 
 #----------Word embedding----------
+class Sync(nn.Module):
+    # Paper required obj_feat and ocr_feat has the same d-dimension
+    # Sync to one dimension (..., 1024, 2048, ...)
+    # Init once and updating parameters
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+
+        self.sync = nn.Linear(
+            in_features=in_dim,
+            out_features=out_dim
+        )
+
+    def forward(self, feats):
+        """
+            :params feats:   BS, num, original_feat_dim
+        """
+        return self.sync(feats)
+
+
 class WordEmbedding(nn.Module):
-    def __init__(self, model, tokenizer, text_embedding_config):
+    def __init__(self, model, tokenizer):
         super().__init__()
         self.config = registry.get_config("model_attributes")["text_embedding"]
         self.device = registry.get_args("device")
@@ -127,7 +145,7 @@ class ObjEmbedding(BaseEmbedding):
 
         #-- Calculate boxes
         linear_obj_feat = self.linear_feat(list_obj_feat)
-        linear_obj_boxes = self.linear_feat(obj_extended_boxes)
+        linear_obj_boxes = self.linear_box(obj_extended_boxes)
         
         obj_embed_features = self.LayerNorm(linear_obj_boxes) + self.LayerNorm(linear_obj_feat)
         return obj_embed_features
@@ -137,7 +155,7 @@ class ObjEmbedding(BaseEmbedding):
 
 #----------- OCR EMBEDDING ----------------
 class OCREmbedding(BaseEmbedding):
-    def __init__(self, fasttext_model):
+    def __init__(self):
         super().__init__()
 
         #-- Build
@@ -155,6 +173,13 @@ class OCREmbedding(BaseEmbedding):
             out_features=self.hidden_size
         )
         
+        # fasttext = 300
+        fasttext_dim = 300
+        self.linear_out_fasttext = nn.Linear(
+            in_features=fasttext_dim,
+            out_features=self.hidden_size
+        )
+
         # phoc_dim = 604
         phoc_dim = 1810
         self.linear_out_phoc = nn.Linear(
@@ -175,12 +200,8 @@ class OCREmbedding(BaseEmbedding):
         self.LayerNorm = nn.LayerNorm(normalized_shape=self.hidden_size)
         
         # Modules
-        self.DeFUM(batch) = DeFUM()
-        self.SgAM = SgAM(
-            sgam_config=self.config["sgam"],
-            fasttext_model=fasttext_model,
-            hidden_size=self.config["hidden_size"]
-        )
+        self.DeFUM = DeFUM()
+        self.SgAM = SgAM()
 
     #-- BUILD
     def build_fasttext_model(self):
@@ -218,15 +239,16 @@ class OCREmbedding(BaseEmbedding):
     def forward(self, batch):
         #~ Load features
         list_ocr_tokens = batch["list_ocr_tokens"]
+        list_ocr_scores = batch["list_ocr_scores"]
         list_ocr_boxes = batch["list_ocr_boxes"]
         list_ocr_scores = batch["list_ocr_scores"]
         list_ocr_depth_feat = batch["list_ocr_depth_feat"]
-        list_clip_image_feat = batch["list_clip_image_feat"]
-        list_clip_object_concepts_feat = batch["list_clip_object_concepts_feat"]
+        # list_clip_image_feat = batch["list_clip_image_feat"]
+        # list_clip_object_concepts_feat = batch["list_clip_object_concepts_feat"]
 
         #~ OCR Token Fasttext / PHOC Embedding / Extend Boxes with Depth Estimaiton
-        ocr_token_ft_embed = torch.tensor([self.fasttext_embedding(tokens) for tokens in list_ocr_tokens]).to(self.device)
-        ocr_token_phoc_embed = torch.tensor([self.phoc_embedding(tokens) for tokens in list_ocr_tokens]).to(self.device)
+        ocr_token_ft_embed = torch.stack([self.fasttext_embedding(tokens) for tokens in list_ocr_tokens]).to(self.device)
+        ocr_token_phoc_embed = torch.stack([self.phoc_embedding(tokens) for tokens in list_ocr_tokens]).to(self.device)
         ocr_extended_boxes = torch.concat(
             [list_ocr_boxes, list_ocr_depth_feat],
             dim=-1
@@ -238,6 +260,16 @@ class OCREmbedding(BaseEmbedding):
         #~ SgAM
         semantic_ocr_tokens_feat, visual_object_concept_feat = self.SgAM(batch) 
 
+        #~ Fusion
+        ocr_feat_embed = self.LayerNorm(
+            self.linear_out_defum(depth_aware_visual_feat) + \
+            self.linear_out_fasttext(ocr_token_ft_embed) + \
+            self.linear_out_phoc(ocr_token_phoc_embed)
+        ) + self.LayerNorm(
+            self.linear_out_ocr_boxes(ocr_extended_boxes) + \
+            self.linear_out_ocr_conf(list_ocr_scores)
+        ) 
+            
         #~ Return 
-        return depth_aware_visual_feat, semantic_ocr_tokens_feat, visual_object_concept_feat
+        return ocr_feat_embed, semantic_ocr_tokens_feat, visual_object_concept_feat
         

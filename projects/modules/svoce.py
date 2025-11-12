@@ -14,7 +14,7 @@ class SVOCE(nn.Module):
         super().__init__()
         self.config = registry.get_config("model_attributes")
         self.svoce_config = self.config["svoce"]
-        self.dataset_attributes_config = self.config["dataset_attributes"]
+        self.dataset_attributes_config = registry.get_config("dataset_attributes")
         self.device = registry.get_args("device")
         self.writer = registry.get_writer("common")
 
