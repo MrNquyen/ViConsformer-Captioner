@@ -87,16 +87,17 @@ class DEVICE(BaseModel):
         self.num_ocr, self.num_obj = self.ocr_config["num_ocr"], self.obj_config["num_obj"]
         self.dim_ocr, self.dim_obj = self.ocr_config["dim"], self.obj_config["dim"]
         self.feature_dim = self.config["feature_dim"]
+        self.hidden_size = self.config["hidden_size"]
 
     def build_sync(self):
         self.sync_ocr = Sync(
             in_dim=self.dim_ocr,
-            out_dim=self.feature_dim
+            out_dim=self.hidden_size
         )
 
         self.sync_obj = Sync(
             in_dim=self.dim_obj,
-            out_dim=self.feature_dim
+            out_dim=self.hidden_size
         )
 
     def build_layers(self):
