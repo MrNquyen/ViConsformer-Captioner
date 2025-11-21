@@ -3,6 +3,7 @@ import math
 import torch
 import numpy as np
 from torch import nn
+import torch.nn.functional as F
 
 from utils.registry import registry
 from utils.utils import load_json, load_npy, load_vocab
@@ -12,18 +13,19 @@ from icecream import ic
 
 # Salient Visual Object Concepts Extractor
 class SgAM(nn.Module):
-    def __init__(self):
+    def __init__(self, fasttext_model):
         super().__init__()
         self.config = registry.get_config("model_attributes")
         self.device = registry.get_args("device")
         self.writer = registry.get_writer("common")
 
+        self.fasttext_model = fasttext_model
         self.hidden_size = self.config["hidden_size"]
         self.common_dim = self.config["feature_dim"]
         self._mask_value = -1e9
 
         #-- LAYER
-        self.svoce = SVOCE()
+        self.svoce = SVOCE(fasttext_model=self.fasttext_model)
 
         self.fasttext_dim = 300
         self.q_linear = nn.Linear(
@@ -60,7 +62,7 @@ class SgAM(nn.Module):
 
         #-- Make Features
         visual_object_concept_feat, concepts_fasttext_feat = self.svoce(batch)
-        ocr_tokens_fasttext_feat = torch.tensor([self.fasttext_embedding(tokens) for tokens in list_ocr_tokens]).to(self.device)
+        ocr_tokens_fasttext_feat = torch.stack([self.fasttext_embedding(tokens) for tokens in list_ocr_tokens]).to(self.device)
         
         #-- Scores Attention
         Q = self.q_linear(concepts_fasttext_feat)
@@ -70,6 +72,9 @@ class SgAM(nn.Module):
         )
         A = QK / math.sqrt(self.fasttext_dim)
         
+        ic(A.shape)
+        ic(F.softmax(A, dim=-1).shape)
+        ic(concepts_fasttext_feat.shape)
         semantic_scores = torch.bmm(F.softmax(A, dim=-1), concepts_fasttext_feat)
         semantic_scores = semantic_scores.masked_fill(ocr_mask == 0, self._mask_value)
 

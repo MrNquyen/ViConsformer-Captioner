@@ -64,6 +64,7 @@ class DeFumAttention(nn.Module):
             V_input=visual_entity
         )
         scores = torch.bmm(F.softmax(A + relative_depth_map, dim=-1), V)
+        ic(scores.shape)
         scores = scores.masked_fill(attention_mask == 0, self._mask_value)
         return scores
 

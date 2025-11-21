@@ -21,7 +21,7 @@ class DeFUM(nn.Module):
         #--layer
         self.defum_attention = DeFumAttention(input_size=self.hidden_size)
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=self.common_dim,
+            d_model=self.hidden_size,
             nhead=self.defum_config["nhead"],
             activation=self.defum_config["activation"],
             batch_first=True,
@@ -31,20 +31,31 @@ class DeFUM(nn.Module):
         
 
     #-- FUNCTION
-    def cal_relative_score(self, dv_i, dv_j):
-        return max(dv_i, dv_j) / min(dv_i, dv_j)
+    # def cal_relative_score(self, dv_i, dv_j):
+    #     return max(dv_i, dv_j) / min(dv_i, dv_j)
+
+
+    # def cal_relative_depth_map(self, depth_visual_entity):
+    #     """
+    #         :params depth_visual_entity:  BS, num_obj + num_ocr, 1
+    #     """
+    #     relative_matrix = [
+    #         [self.cal_relative_score(dv_i, dv_j) for dv_i in depth_visual_entity ]
+    #         for dv_j in depth_visual_entity
+    #     ]
+    #     return torch.tensor(relative_matrix)
 
 
     def cal_relative_depth_map(self, depth_visual_entity):
-        """
-            :params depth_visual_entity:  BS, num_obj + num_ocr, 1
-        """
-        relative_matrix = [
-            [self.cal_relative_score(dv_i, dv_j) for dv_i in depth_visual_entity ]
-            for dv_j in depth_visual_entity
-        ]
-        return torch.tensor(relative_matrix)
+        EPS = 1e-8
+        dv_i = depth_visual_entity.unsqueeze(2)   # (B, M+N, 1)
+        dv_j = depth_visual_entity.unsqueeze(1)   # (B, 1, M+N)
 
+        minimum = torch.min(dv_i, dv_j)  # (B, M+N, M+N)
+        maximum = torch.max(dv_i, dv_j)  # (B, M+N, M+N)
+
+        R = torch.log((minimum + EPS) / (maximum + EPS)).squeeze(-1).to(self.device)
+        return R
 
     
     #-- FORWARD
@@ -61,9 +72,11 @@ class DeFUM(nn.Module):
         attention_mask = torch.concat(
             [ocr_mask, obj_mask],
             dim=1
-        )
+        ).unsqueeze(-1)
 
         #~ Visual Entities / Depth Visual Entities (Concat obj_feat and ocr_feat) (obj is the bridge link its adjacent scene texts)
+        ic(list_ocr_feat.shape)
+        ic(list_obj_feat.shape)
         visual_entity = torch.concat(
             [list_ocr_feat, list_obj_feat],
             dim=1
@@ -72,24 +85,31 @@ class DeFUM(nn.Module):
             [list_ocr_depth_feat, list_obj_depth_feat],
             dim=1
         )
-        relative_depth_map = []
-        for dv_item in depth_visual_entity:
-            relative_depth_map_item = self.cal_relative_depth_map(dv_item)
-            relative_depth_map.append(torch.log(relative_depth_map_item))
-        R = torch.stack(relative_depth_map).to(torch.float32).to(self.device)
+
+        ic(depth_visual_entity.shape)
+        # relative_depth_map = []
+        # for dv_item in depth_visual_entity:
+        #     relative_depth_map_item = self.cal_relative_depth_map(dv_item)
+        #     relative_depth_map.append(torch.log(relative_depth_map_item))
+        # R = torch.stack(relative_depth_map).to(torch.float32).to(self.device)
+        R = self.cal_relative_depth_map(depth_visual_entity)
 
         #~ Depth Aware Self Attention
+        ic(visual_entity.shape)
+        ic(R.shape)
+        ic(attention_mask.shape)
         attention_scores = self.defum_attention(
             visual_entity=visual_entity, 
-            relative_depth_map=relative_depth_map, 
+            relative_depth_map=R, 
             attention_mask=attention_mask
         )
 
         #~ Transformer Encoder
         inputs = self.LayerNorm(visual_entity + attention_scores)
+        ic(inputs.shape)
         depth_aware_visual_feat = self.transformer_encoder(
             inputs, 
-            src_key_padding_mask=attention_mask.bool()
+            src_key_padding_mask=attention_mask.squeeze(-1).bool()
         )
         return depth_aware_visual_feat
 

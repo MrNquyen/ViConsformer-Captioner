@@ -258,7 +258,7 @@ class Trainer():
 
         # CLIP Feat
         list_clip_image_feat = batch["list_clip_image_feat"]
-        list_clip_image_feat = torch.tensor(list_clip_image_feat).unsqueeze(1)
+        list_clip_image_feat = torch.tensor(np.array(list_clip_image_feat)).unsqueeze(1)
         batch["list_clip_image_feat"] = list_clip_image_feat
 
         return batch

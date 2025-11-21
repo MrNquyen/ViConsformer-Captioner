@@ -33,16 +33,12 @@ class BaseModel(nn.Module):
     def build_model_init(self):
         # Finetune module is the module has lower lr than others module
         self.finetune_modules = []
-        self.build_fasttext_model()
 
     def add_finetune_modules(self, module: nn.Module):
         self.finetune_modules.append({
             'module': module,
             'lr_scale': self.config["adjust_optimizer"]["lr_scale"],
         })
-
-    def build_fasttext_model(self):
-        self.fasttext_model = fasttext.load_model(self.config["fasttext_bin"])
 
 
 
@@ -316,7 +312,7 @@ class DEVICE(BaseModel):
             # Init prev_ids with <s> idx at begin, else where with <pad> (at idx 0)
             start_idx = self.word_embedding.common_vocab.get_start_index() 
             pad_idx = self.word_embedding.common_vocab.get_pad_index()
-            batch_size = obj_embed.size(0)
+            batch_size = obj_embed_feat.size(0)
 
             prev_inds = torch.full((batch_size, num_dec_step), pad_idx).to(self.device)
             prev_inds[:, 0] = start_idx

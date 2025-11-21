@@ -122,7 +122,7 @@ class ObjEmbedding(BaseEmbedding):
     def __init__(self):
         super().__init__()
         self.linear_feat = nn.Linear(
-            in_features=self.common_dim,
+            in_features=self.hidden_size,
             out_features=self.hidden_size
         )
 
@@ -201,7 +201,7 @@ class OCREmbedding(BaseEmbedding):
         
         # Modules
         self.DeFUM = DeFUM()
-        self.SgAM = SgAM()
+        self.SgAM = SgAM(fasttext_model=self.fasttext_model)
 
     #-- BUILD
     def build_fasttext_model(self):
@@ -225,15 +225,19 @@ class OCREmbedding(BaseEmbedding):
         """
             :params words:  List of word needed to embedded
         """
-        fasttext_embedding = [
-            fasttext_embedding_module(
-                model=self.fasttext_model,
-                word=word
+        # Convert each numpy array to torch.tensor
+        ft_embeds = [
+            torch.from_numpy(
+                fasttext_embedding_module(
+                    model=self.fasttext_model,
+                    word=word
+                )
             ) 
             for word in words
         ]
-        return torch.tensor(fasttext_embedding).to(self.device)
-
+        
+        # Stack into one tensor [num_words, dim]
+        return torch.stack(ft_embeds).to(self.device)
     
     #-- FORWARD
     def forward(self, batch):
