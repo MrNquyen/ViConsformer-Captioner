@@ -108,8 +108,8 @@ class PrevEmbedding(nn.Module):
         # -- Position and token type
         pos_type_embeddings = position_embeddings + token_type_embedddings 
         # ic(pos_type_embeddings.shape)
-        pos_type_embeddings = self.emb_layer_norm(pos_type_embeddings)
-        pos_type_embeddings = self.emb_dropout(pos_type_embeddings)
+        pos_type_embeddings = self.LayerNorm(pos_type_embeddings)
+        pos_type_embeddings = self.Dropout(pos_type_embeddings)
 
         # -- LastWord, Position, token type
         prev_emb = last_word_embeddings + pos_type_embeddings
@@ -194,7 +194,7 @@ class EncoderAsDecoder(RobertaPreTrainedModel):
             #~~%% Training: prev_embed is all the word in the captions
             #~~%% Testing: prev_embed is only the previous word
         prev_embed = self.prev_embedding(
-            common_voc_embed=common_vocab_embed,
+            common_vocab_embed=common_vocab_embed,
             ocr_embed=ocr_embed,
             prev_inds=prev_inds
         )
@@ -257,7 +257,7 @@ class EncoderAsDecoder(RobertaPreTrainedModel):
         
         #-- Disable grad
         assert not extended_attention_mask.requires_grad
-        head_mask = [None] * self.config["num_layers"]
+        head_mask = [None] * self.mmt_config["num_layers"]
 
         # -- Pass forward encoder
             #~ encoder_outputs is a tuple (or BaseModelOutput):

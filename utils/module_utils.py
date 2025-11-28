@@ -89,12 +89,18 @@ def _batch_padding_string(
     
     for seq in sequences:
         seq_len = len(seq)
-        # 1) Pad up to max_length
-        padded_seq = seq + [pad_value] * max((max_length - seq_len), 0)
+        # 1) Pad and truncate up to max_length
+        #-- Padding
+        if max_length > seq_len:
+            padded_seq = seq + [pad_value] * max((max_length - seq_len), 0)
+        #-- Truncating
+        else:
+            padded_seq = seq[:max_length]
+
         padded.append(padded_seq)
         # 2) Mask: 1 for real tokens, 0 for pads
         if return_mask:
-            mask.append([1] * seq_len + [0] * (max_length - seq_len))
+            mask.append([1] * min(seq_len, max_length) + [0] * max((max_length - seq_len), 0))
     
     if return_mask:
         return padded, mask
@@ -145,11 +151,16 @@ def _batch_padding(inputs, max_length, pad_value, return_mask=True):
     # Padding
     pad_input = []
     for item in inputs:
-        pad_post = pad_value.expand(max_length-len(item), -1)
-        item = torch.concat(
-            [torch.tensor(item), pad_post],
-            dim=0
-        )
+        #-- Padding
+        if max_length-len(item) >= 0:
+            pad_post = pad_value.expand(max_length-len(item), -1)
+            item = torch.concat(
+                [torch.tensor(item), pad_post],
+                dim=0
+            )
+        #-- Truncate
+        else:
+            item = torch.tensor(item)[:max_length, :]
         pad_input.append(item)
     pad_input = torch.stack(pad_input)
     if return_mask:

@@ -75,9 +75,7 @@ class SVOCE(nn.Module):
     
     def calculate_scores(self, list_clip_image_feat):
         BATCH_SIZE = list_clip_image_feat.size(0)
-        ic(self.clip_concepts_feat.shape)
         expand_clip_concepts_feat = self.clip_concepts_feat.expand(BATCH_SIZE, -1, -1)
-        ic(expand_clip_concepts_feat.shape)
         scores = torch.bmm(
             expand_clip_concepts_feat, torch.transpose(list_clip_image_feat, 2, 1)
         ).softmax(dim=-1)
@@ -101,21 +99,17 @@ class SVOCE(nn.Module):
     #-- Forward Pass
     def forward(self, batch):
         list_clip_image_feat = batch["list_clip_image_feat"] # BS, 1, clip_hidden_size
-        ic(list_clip_image_feat.shape)
         similarity_scores = self.calculate_scores(list_clip_image_feat) # BS, num_concepts, 1
 
         #-- Sort
         top_k_concepts_id = torch.argsort(similarity_scores, dim=1, descending=True).squeeze(-1)[:, :self.top_k]
         top_k_concepts_vi = [[self.en2vi[self.id2en[id.item()]] for id in per_image_top_k] for per_image_top_k in top_k_concepts_id]
-        ic(similarity_scores.shape)
-        ic(top_k_concepts_id.shape)
         top_k_concepts_scores = torch.gather(similarity_scores, 1, top_k_concepts_id).unsqueeze(-1)
 
         #-- Fasttext Embedding
         concepts_fasttext_feat = torch.stack([self.fasttext_embedding(concepts) for concepts in top_k_concepts_vi]).to(self.device)
 
         #-- Visual Object Concept Embedding
-        ic(top_k_concepts_scores.shape)
         visual_object_concept_feat = self.LayerNorm(
             self.linear_concept(concepts_fasttext_feat)
         ) + self.LayerNorm(

@@ -37,7 +37,7 @@ class SgAM(nn.Module):
             in_features=self.fasttext_dim,
             out_features=self.fasttext_dim
         )
-        self.LayerNorm = nn.LayerNorm(normalized_shape=self.hidden_size)
+        self.LayerNorm = nn.LayerNorm(normalized_shape=self.fasttext_dim)
 
     
     def fasttext_embedding(self, words: list):
@@ -65,18 +65,16 @@ class SgAM(nn.Module):
         ocr_tokens_fasttext_feat = torch.stack([self.fasttext_embedding(tokens) for tokens in list_ocr_tokens]).to(self.device)
         
         #-- Scores Attention
-        Q = self.q_linear(concepts_fasttext_feat)
-        K = self.k_linear(ocr_tokens_fasttext_feat)
+        Q = self.k_linear(ocr_tokens_fasttext_feat)
+        K = self.q_linear(concepts_fasttext_feat)
         QK = torch.bmm(
             Q, torch.transpose(K, 2, 1)
         )
         A = QK / math.sqrt(self.fasttext_dim)
-        
-        ic(A.shape)
-        ic(F.softmax(A, dim=-1).shape)
-        ic(concepts_fasttext_feat.shape)
+
         semantic_scores = torch.bmm(F.softmax(A, dim=-1), concepts_fasttext_feat)
-        semantic_scores = semantic_scores.masked_fill(ocr_mask == 0, self._mask_value)
+
+        semantic_scores = semantic_scores.masked_fill(ocr_mask.unsqueeze(-1) == 0, self._mask_value)
 
         #-- Semantic Embedding for OCR Tokens
         semantic_ocr_tokens_feat = self.LayerNorm(ocr_tokens_fasttext_feat + semantic_scores)

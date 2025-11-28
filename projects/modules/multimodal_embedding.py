@@ -162,12 +162,12 @@ class OCREmbedding(BaseEmbedding):
         self.build_fasttext_model()
         
         #-- Layers
+        fasttext_dim = 300
         self.linear_out_defum = nn.Linear(
-            in_features=self.common_dim,
+            in_features=self.hidden_size,
             out_features=self.hidden_size
         )
 
-        fasttext_dim = 300
         self.linear_out_sgam = nn.Linear(
             in_features=fasttext_dim,
             out_features=self.hidden_size
@@ -271,7 +271,7 @@ class OCREmbedding(BaseEmbedding):
             self.linear_out_phoc(ocr_token_phoc_embed)
         ) + self.LayerNorm(
             self.linear_out_ocr_boxes(ocr_extended_boxes) + \
-            self.linear_out_ocr_conf(list_ocr_scores)
+            self.linear_out_ocr_conf(list_ocr_scores.unsqueeze(-1))
         ) 
             
         #~ Return 

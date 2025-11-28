@@ -287,7 +287,10 @@ class DEVICE(BaseModel):
         obj_embed_feat = self.obj_embedding(batch)
         ocr_feat_embed, semantic_ocr_tokens_feat, visual_object_concept_feat = self.ocr_embedding(batch)
         common_vocab_embed = self.classifier.weight
-        
+
+        vocab_size = common_vocab_embed.size(0)
+        num_ocr = ocr_mask.size(1)
+
         #-- Training and Inference
         if self.training:
             #~ prev_inds
@@ -316,7 +319,7 @@ class DEVICE(BaseModel):
 
             prev_inds = torch.full((batch_size, num_dec_step), pad_idx).to(self.device)
             prev_inds[:, 0] = start_idx
-            scores = None
+            scores = torch.zeros((batch_size, num_dec_step, vocab_size + num_ocr)).to(self.device)
 
             for i in range(num_dec_step):
                 results = self.forward_mmt(
@@ -329,9 +332,10 @@ class DEVICE(BaseModel):
                     common_vocab_embed=common_vocab_embed,
                     prev_inds=prev_inds
                 )
-                scores = self.forward_output(results)
-                argmax_inds = scores.argmax(dim=-1)
-                prev_inds = argmax_inds[:, :-1]
+                step_score = self.forward_output(results)
+                argmax_inds = step_score.argmax(dim=-1)
+                prev_inds[:, i] = argmax_inds[:, i]
+                scores[:, i, :] = step_score[:, i, :]
             return scores, prev_inds
 
 

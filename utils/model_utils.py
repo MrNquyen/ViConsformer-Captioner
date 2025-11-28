@@ -11,7 +11,6 @@ def get_optimizer_parameters(model, config):
 
 
 def lr_lambda_update(i_iter, cfg):
-    ic(cfg)
     if (
         cfg["use_warmup"] is True
         and i_iter <= cfg["warmup_iterations"]

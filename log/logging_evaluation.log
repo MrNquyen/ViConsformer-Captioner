@@ -1,1 +1,570 @@
 Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Evaluate batch: 1
+Logging at epoch 1000
+Evaluate batch: 2
+Logging at epoch 1000
+Evaluate batch: 3
+Logging at epoch 1000
+Evaluate batch: 4
+Logging at epoch 1000
+Evaluate batch: 5
+Logging at epoch 1000
+Evaluate batch: 6
+Logging at epoch 1000
+Evaluate batch: 7
+Logging at epoch 1000
+Evaluate batch: 8
+Logging at epoch 1000
+Evaluate batch: 9
+Logging at epoch 1000
+Evaluate batch: 10
+Logging at epoch 1000
+Evaluate batch: 11
+Logging at epoch 1000
+Evaluate batch: 12
+Logging at epoch 1000
+Evaluate batch: 13
+Logging at epoch 1000
+Evaluate batch: 14
+Logging at epoch 1000
+Evaluate batch: 15
+Logging at epoch 1000
+Evaluate batch: 16
+Logging at epoch 1000
+Evaluate batch: 17
+Logging at epoch 1000
+Evaluate batch: 18
+Logging at epoch 1000
+Evaluate batch: 19
+Logging at epoch 1000
+Evaluate batch: 20
+Logging at epoch 1000
+Evaluate batch: 21
+Logging at epoch 1000
+Evaluate batch: 22
+Logging at epoch 1000
+Evaluate batch: 23
+Logging at epoch 1000
+Evaluate batch: 24
+Logging at epoch 1000
+Evaluate batch: 25
+Logging at epoch 1000
+Evaluate batch: 26
+Logging at epoch 1000
+Evaluate batch: 27
+Logging at epoch 1000
+Evaluate batch: 28
+Logging at epoch 1000
+|| Metrics Calculation || val split || epoch: 1000 || loss: 20.43690667833601
+Final scores:
+{'Bleu_1': 0.014192825112107463, 'Bleu_2': 0.0015076584927305795, 'Bleu_3': 2.9830231459658928e-09, 'Bleu_4': 4.2181234935322306e-12, 'METEOR': 0.0681997762259479, 'ROUGE_L': np.float64(0.015163720233191895), 'CIDEr': np.float64(0.0004128129420349427)}
+Evaluate batch: 1
+Logging at epoch 2000
+Evaluate batch: 2
+Logging at epoch 2000
+Evaluate batch: 3
+Logging at epoch 2000
+Evaluate batch: 4
+Logging at epoch 2000
+Evaluate batch: 5
+Logging at epoch 2000
+Evaluate batch: 6
+Logging at epoch 2000
+Evaluate batch: 7
+Logging at epoch 2000
+Evaluate batch: 8
+Logging at epoch 2000
+Evaluate batch: 9
+Logging at epoch 2000
+Evaluate batch: 10
+Logging at epoch 2000
+Evaluate batch: 11
+Logging at epoch 2000
+Evaluate batch: 12
+Logging at epoch 2000
+Evaluate batch: 13
+Logging at epoch 2000
+Evaluate batch: 14
+Logging at epoch 2000
+Evaluate batch: 15
+Logging at epoch 2000
+Evaluate batch: 16
+Logging at epoch 2000
+Evaluate batch: 17
+Logging at epoch 2000
+Evaluate batch: 18
+Logging at epoch 2000
+Evaluate batch: 19
+Logging at epoch 2000
+Evaluate batch: 20
+Logging at epoch 2000
+Evaluate batch: 21
+Logging at epoch 2000
+Evaluate batch: 22
+Logging at epoch 2000
+Evaluate batch: 23
+Logging at epoch 2000
+Evaluate batch: 24
+Logging at epoch 2000
+Evaluate batch: 25
+Logging at epoch 2000
+Evaluate batch: 26
+Logging at epoch 2000
+Evaluate batch: 27
+Logging at epoch 2000
+Evaluate batch: 28
+Logging at epoch 2000
+|| Metrics Calculation || val split || epoch: 2000 || loss: 20.50507892881121
+Final scores:
+{'Bleu_1': 0.02147982062780245, 'Bleu_2': 0.00434975927402635, 'Bleu_3': 6.0454892421430516e-09, 'Bleu_4': 7.1647396294194275e-12, 'METEOR': 0.1292101830547409, 'ROUGE_L': np.float64(0.02199109577935166), 'CIDEr': np.float64(0.0014806160869841021)}
+Evaluate batch: 1
+Logging at epoch 3000
+Evaluate batch: 2
+Logging at epoch 3000
+Evaluate batch: 3
+Logging at epoch 3000
+Evaluate batch: 4
+Logging at epoch 3000
+Evaluate batch: 5
+Logging at epoch 3000
+Evaluate batch: 6
+Logging at epoch 3000
+Evaluate batch: 7
+Logging at epoch 3000
+Evaluate batch: 8
+Logging at epoch 3000
+Evaluate batch: 9
+Logging at epoch 3000
+Evaluate batch: 10
+Logging at epoch 3000
+Evaluate batch: 11
+Logging at epoch 3000
+Evaluate batch: 12
+Logging at epoch 3000
+Evaluate batch: 13
+Logging at epoch 3000
+Evaluate batch: 14
+Logging at epoch 3000
+Evaluate batch: 15
+Logging at epoch 3000
+Evaluate batch: 16
+Logging at epoch 3000
+Evaluate batch: 17
+Logging at epoch 3000
+Evaluate batch: 18
+Logging at epoch 3000
+Evaluate batch: 19
+Logging at epoch 3000
+Evaluate batch: 20
+Logging at epoch 3000
+Evaluate batch: 21
+Logging at epoch 3000
+Evaluate batch: 22
+Logging at epoch 3000
+Evaluate batch: 23
+Logging at epoch 3000
+Evaluate batch: 24
+Logging at epoch 3000
+Evaluate batch: 25
+Logging at epoch 3000
+Evaluate batch: 26
+Logging at epoch 3000
+Evaluate batch: 27
+Logging at epoch 3000
+Evaluate batch: 28
+Logging at epoch 3000
+|| Metrics Calculation || val split || epoch: 3000 || loss: 28.38184036527361
+Final scores:
+{'Bleu_1': 0.013598654708520026, 'Bleu_2': 0.000394414168995023, 'Bleu_3': 1.2201773987697783e-09, 'Bleu_4': 2.1574664717496274e-12, 'METEOR': 0.11019470271279981, 'ROUGE_L': np.float64(0.013244270914692385), 'CIDEr': np.float64(0.0009702642820904356)}
+Evaluate batch: 1
+Logging at epoch 4000
+Evaluate batch: 2
+Logging at epoch 4000
+Evaluate batch: 3
+Logging at epoch 4000
+Evaluate batch: 4
+Logging at epoch 4000
+Evaluate batch: 5
+Logging at epoch 4000
+Evaluate batch: 6
+Logging at epoch 4000
+Evaluate batch: 7
+Logging at epoch 4000
+Evaluate batch: 8
+Logging at epoch 4000
+Evaluate batch: 9
+Logging at epoch 4000
+Evaluate batch: 10
+Logging at epoch 4000
+Evaluate batch: 11
+Logging at epoch 4000
+Evaluate batch: 12
+Logging at epoch 4000
+Evaluate batch: 13
+Logging at epoch 4000
+Evaluate batch: 14
+Logging at epoch 4000
+Evaluate batch: 15
+Logging at epoch 4000
+Evaluate batch: 16
+Logging at epoch 4000
+Evaluate batch: 17
+Logging at epoch 4000
+Evaluate batch: 18
+Logging at epoch 4000
+Evaluate batch: 19
+Logging at epoch 4000
+Evaluate batch: 20
+Logging at epoch 4000
+Evaluate batch: 21
+Logging at epoch 4000
+Evaluate batch: 22
+Logging at epoch 4000
+Evaluate batch: 23
+Logging at epoch 4000
+Evaluate batch: 24
+Logging at epoch 4000
+Evaluate batch: 25
+Logging at epoch 4000
+Evaluate batch: 26
+Logging at epoch 4000
+Evaluate batch: 27
+Logging at epoch 4000
+Evaluate batch: 28
+Logging at epoch 4000
+|| Metrics Calculation || val split || epoch: 4000 || loss: 26.836136272975377
+Final scores:
+{'Bleu_1': 0.009674887892376572, 'Bleu_2': 0.0004704814484807245, 'Bleu_3': 1.3724071537446304e-09, 'Bleu_4': 2.3563459531443185e-12, 'METEOR': 0.05542297623958347, 'ROUGE_L': np.float64(0.009423507409476716), 'CIDEr': np.float64(0.0004973739518867516)}
+Evaluate batch: 1
+Logging at epoch 5000
+Evaluate batch: 2
+Logging at epoch 5000
+Evaluate batch: 3
+Logging at epoch 5000
+Evaluate batch: 4
+Logging at epoch 5000
+Evaluate batch: 5
+Logging at epoch 5000
+Evaluate batch: 6
+Logging at epoch 5000
+Evaluate batch: 7
+Logging at epoch 5000
+Evaluate batch: 8
+Logging at epoch 5000
+Evaluate batch: 9
+Logging at epoch 5000
+Evaluate batch: 10
+Logging at epoch 5000
+Evaluate batch: 11
+Logging at epoch 5000
+Evaluate batch: 12
+Logging at epoch 5000
+Evaluate batch: 13
+Logging at epoch 5000
+Evaluate batch: 14
+Logging at epoch 5000
+Evaluate batch: 15
+Logging at epoch 5000
+Evaluate batch: 16
+Logging at epoch 5000
+Evaluate batch: 17
+Logging at epoch 5000
+Evaluate batch: 18
+Logging at epoch 5000
+Evaluate batch: 19
+Logging at epoch 5000
+Evaluate batch: 20
+Logging at epoch 5000
+Evaluate batch: 21
+Logging at epoch 5000
+Evaluate batch: 22
+Logging at epoch 5000
+Evaluate batch: 23
+Logging at epoch 5000
+Evaluate batch: 24
+Logging at epoch 5000
+Evaluate batch: 25
+Logging at epoch 5000
+Evaluate batch: 26
+Logging at epoch 5000
+Evaluate batch: 27
+Logging at epoch 5000
+Evaluate batch: 28
+Logging at epoch 5000
+|| Metrics Calculation || val split || epoch: 5000 || loss: 23.175617694854736
+Final scores:
+{'Bleu_1': 0.0026457399103138714, 'Bleu_2': 5.501461895361138e-12, 'Bleu_3': 7.0703358479280675e-15, 'Bleu_4': 2.548043604524017e-16, 'METEOR': 0.09168931363491906, 'ROUGE_L': np.float64(0.002482029247240931), 'CIDEr': np.float64(0.00024190890011906754)}
+Evaluate batch: 1
+Logging at epoch 6000
+Evaluate batch: 2
+Logging at epoch 6000
+Evaluate batch: 3
+Logging at epoch 6000
+Evaluate batch: 4
+Logging at epoch 6000
+Evaluate batch: 5
+Logging at epoch 6000
+Evaluate batch: 6
+Logging at epoch 6000
+Evaluate batch: 7
+Logging at epoch 6000
+Evaluate batch: 8
+Logging at epoch 6000
+Evaluate batch: 9
+Logging at epoch 6000
+Evaluate batch: 10
+Logging at epoch 6000
+Evaluate batch: 11
+Logging at epoch 6000
+Evaluate batch: 12
+Logging at epoch 6000
+Evaluate batch: 13
+Logging at epoch 6000
+Evaluate batch: 14
+Logging at epoch 6000
+Evaluate batch: 15
+Logging at epoch 6000
+Evaluate batch: 16
+Logging at epoch 6000
+Evaluate batch: 17
+Logging at epoch 6000
+Evaluate batch: 18
+Logging at epoch 6000
+Evaluate batch: 19
+Logging at epoch 6000
+Evaluate batch: 20
+Logging at epoch 6000
+Evaluate batch: 21
+Logging at epoch 6000
+Evaluate batch: 22
+Logging at epoch 6000
+Evaluate batch: 23
+Logging at epoch 6000
+Evaluate batch: 24
+Logging at epoch 6000
+Evaluate batch: 25
+Logging at epoch 6000
+Evaluate batch: 26
+Logging at epoch 6000
+Evaluate batch: 27
+Logging at epoch 6000
+Evaluate batch: 28
+Logging at epoch 6000
+|| Metrics Calculation || val split || epoch: 6000 || loss: 26.86774274281093
+Final scores:
+{'Bleu_1': 0.005560538116591866, 'Bleu_2': 7.975592311331578e-12, 'Bleu_3': 9.056559990202776e-15, 'Bleu_4': 3.0679570413020153e-16, 'METEOR': 0.07453611199053485, 'ROUGE_L': np.float64(0.005577745358038903), 'CIDEr': np.float64(0.00017653114275716154)}
+Evaluate batch: 1
+Logging at epoch 7000
+Evaluate batch: 2
+Logging at epoch 7000
+Evaluate batch: 3
+Logging at epoch 7000
+Evaluate batch: 4
+Logging at epoch 7000
+Evaluate batch: 5
+Logging at epoch 7000
+Evaluate batch: 6
+Logging at epoch 7000
+Evaluate batch: 7
+Logging at epoch 7000
+Evaluate batch: 8
+Logging at epoch 7000
+Evaluate batch: 9
+Logging at epoch 7000
+Evaluate batch: 10
+Logging at epoch 7000
+Evaluate batch: 11
+Logging at epoch 7000
+Evaluate batch: 12
+Logging at epoch 7000
+Evaluate batch: 13
+Logging at epoch 7000
+Evaluate batch: 14
+Logging at epoch 7000
+Evaluate batch: 15
+Logging at epoch 7000
+Evaluate batch: 16
+Logging at epoch 7000
+Evaluate batch: 17
+Logging at epoch 7000
+Evaluate batch: 18
+Logging at epoch 7000
+Evaluate batch: 19
+Logging at epoch 7000
+Evaluate batch: 20
+Logging at epoch 7000
+Evaluate batch: 21
+Logging at epoch 7000
+Evaluate batch: 22
+Logging at epoch 7000
+Evaluate batch: 23
+Logging at epoch 7000
+Evaluate batch: 24
+Logging at epoch 7000
+Evaluate batch: 25
+Logging at epoch 7000
+Evaluate batch: 26
+Logging at epoch 7000
+Evaluate batch: 27
+Logging at epoch 7000
+Evaluate batch: 28
+Logging at epoch 7000
+|| Metrics Calculation || val split || epoch: 7000 || loss: 41.826879910060335
+Final scores:
+{'Bleu_1': 0.006042600896860918, 'Bleu_2': 8.314123864456927e-12, 'Bleu_3': 9.311056552808172e-15, 'Bleu_4': 3.1323915687657416e-16, 'METEOR': 0.11075557918599142, 'ROUGE_L': np.float64(0.005739020827660385), 'CIDEr': np.float64(0.0004523293736127776)}
+Evaluate batch: 1
+Logging at epoch 8000
+Evaluate batch: 2
+Logging at epoch 8000
+Evaluate batch: 3
+Logging at epoch 8000
+Evaluate batch: 4
+Logging at epoch 8000
+Evaluate batch: 5
+Logging at epoch 8000
+Evaluate batch: 6
+Logging at epoch 8000
+Evaluate batch: 7
+Logging at epoch 8000
+Evaluate batch: 8
+Logging at epoch 8000
+Evaluate batch: 9
+Logging at epoch 8000
+Evaluate batch: 10
+Logging at epoch 8000
+Evaluate batch: 11
+Logging at epoch 8000
+Evaluate batch: 12
+Logging at epoch 8000
+Evaluate batch: 13
+Logging at epoch 8000
+Evaluate batch: 14
+Logging at epoch 8000
+Evaluate batch: 15
+Logging at epoch 8000
+Evaluate batch: 16
+Logging at epoch 8000
+Evaluate batch: 17
+Logging at epoch 8000
+Evaluate batch: 18
+Logging at epoch 8000
+Evaluate batch: 19
+Logging at epoch 8000
+Evaluate batch: 20
+Logging at epoch 8000
+Evaluate batch: 21
+Logging at epoch 8000
+Evaluate batch: 22
+Logging at epoch 8000
+Evaluate batch: 23
+Logging at epoch 8000
+Evaluate batch: 24
+Logging at epoch 8000
+Evaluate batch: 25
+Logging at epoch 8000
+Evaluate batch: 26
+Logging at epoch 8000
+Evaluate batch: 27
+Logging at epoch 8000
+Evaluate batch: 28
+Logging at epoch 8000
+|| Metrics Calculation || val split || epoch: 8000 || loss: 44.751494952610564
+Final scores:
+{'Bleu_1': 0.005056053811659136, 'Bleu_2': 7.605195432789002e-12, 'Bleu_3': 8.773944643004474e-15, 'Bleu_4': 2.9958701824273453e-16, 'METEOR': 0.12534876479571175, 'ROUGE_L': np.float64(0.004960152858317965), 'CIDEr': np.float64(0.00042299146262672415)}
+Evaluate batch: 1
+Logging at epoch 9000
+Evaluate batch: 2
+Logging at epoch 9000
+Evaluate batch: 3
+Logging at epoch 9000
+Evaluate batch: 4
+Logging at epoch 9000
+Evaluate batch: 5
+Logging at epoch 9000
+Evaluate batch: 6
+Logging at epoch 9000
+Evaluate batch: 7
+Logging at epoch 9000
+Evaluate batch: 8
+Logging at epoch 9000
+Evaluate batch: 9
+Logging at epoch 9000
+Evaluate batch: 10
+Logging at epoch 9000
+Evaluate batch: 11
+Logging at epoch 9000
+Evaluate batch: 12
+Logging at epoch 9000
+Evaluate batch: 13
+Logging at epoch 9000
+Evaluate batch: 14
+Logging at epoch 9000
+Evaluate batch: 15
+Logging at epoch 9000
+Evaluate batch: 16
+Logging at epoch 9000
+Evaluate batch: 17
+Logging at epoch 9000
+Evaluate batch: 18
+Logging at epoch 9000
+Evaluate batch: 19
+Logging at epoch 9000
+Evaluate batch: 20
+Logging at epoch 9000
+Evaluate batch: 21
+Logging at epoch 9000
+Evaluate batch: 22
+Logging at epoch 9000
+Evaluate batch: 23
+Logging at epoch 9000
+Evaluate batch: 24
+Logging at epoch 9000
+Evaluate batch: 25
+Logging at epoch 9000
+Evaluate batch: 26
+Logging at epoch 9000
+Evaluate batch: 27
+Logging at epoch 9000
+Evaluate batch: 28
+Logging at epoch 9000
+|| Metrics Calculation || val split || epoch: 9000 || loss: 43.38158825465611
+Final scores:
+{'Bleu_1': 0.005661434977578411, 'Bleu_2': 8.047626218065964e-12, 'Bleu_3': 9.111009554784583e-15, 'Bleu_4': 3.0817804768458785e-16, 'METEOR': 0.12809587375473244, 'ROUGE_L': np.float64(0.005652337051160225), 'CIDEr': np.float64(0.00042220432050337647)}
+Evaluate batch: 1
+Logging at epoch 9000
+Evaluate batch: 2
+Logging at epoch 9000
+Evaluate batch: 3
+Logging at epoch 9000
+Evaluate batch: 4
+Logging at epoch 9000
+Evaluate batch: 5
+Logging at epoch 9000
+Evaluate batch: 6
+Logging at epoch 9000
+Evaluate batch: 7
+Logging at epoch 9000
+Evaluate batch: 8
+Logging at epoch 9000
+Evaluate batch: 9
+Logging at epoch 9000
+Evaluate batch: 10
+Logging at epoch 9000
+Evaluate batch: 11
+Logging at epoch 9000
+Evaluate batch: 12
+Logging at epoch 9000
+Evaluate batch: 13

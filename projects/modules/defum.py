@@ -27,6 +27,14 @@ class DeFUM(nn.Module):
             batch_first=True,
         )
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=self.defum_config["num_layers"])
+        
+        decoder_layer = nn.TransformerDecoderLayer(
+            d_model=self.hidden_size,
+            nhead=self.defum_config["nhead"],
+            activation=self.defum_config["activation"],
+            batch_first=True,
+        )
+        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=self.defum_config["num_layers"])
         self.LayerNorm = nn.LayerNorm(normalized_shape=self.hidden_size)
         
 
@@ -75,8 +83,6 @@ class DeFUM(nn.Module):
         ).unsqueeze(-1)
 
         #~ Visual Entities / Depth Visual Entities (Concat obj_feat and ocr_feat) (obj is the bridge link its adjacent scene texts)
-        ic(list_ocr_feat.shape)
-        ic(list_obj_feat.shape)
         visual_entity = torch.concat(
             [list_ocr_feat, list_obj_feat],
             dim=1
@@ -85,8 +91,6 @@ class DeFUM(nn.Module):
             [list_ocr_depth_feat, list_obj_depth_feat],
             dim=1
         )
-
-        ic(depth_visual_entity.shape)
         # relative_depth_map = []
         # for dv_item in depth_visual_entity:
         #     relative_depth_map_item = self.cal_relative_depth_map(dv_item)
@@ -95,9 +99,6 @@ class DeFUM(nn.Module):
         R = self.cal_relative_depth_map(depth_visual_entity)
 
         #~ Depth Aware Self Attention
-        ic(visual_entity.shape)
-        ic(R.shape)
-        ic(attention_mask.shape)
         attention_scores = self.defum_attention(
             visual_entity=visual_entity, 
             relative_depth_map=R, 
@@ -106,11 +107,17 @@ class DeFUM(nn.Module):
 
         #~ Transformer Encoder
         inputs = self.LayerNorm(visual_entity + attention_scores)
-        ic(inputs.shape)
-        depth_aware_visual_feat = self.transformer_encoder(
+        encoder_out = self.transformer_encoder(
             inputs, 
             src_key_padding_mask=attention_mask.squeeze(-1).bool()
         )
+        depth_aware_visual_feat = self.transformer_decoder(
+            memory=encoder_out, # BS, M+N, hidden_size
+            tgt=list_ocr_feat, # BS, M, hidden_size
+            memory_key_padding_mask=attention_mask.squeeze(-1).bool(),
+            tgt_key_padding_mask=ocr_mask, 
+        )
+        
         return depth_aware_visual_feat
 
 

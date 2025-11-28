@@ -43,11 +43,11 @@ model_attributes:
   mutimodal_transformer:
     num_layers: 4
     nhead: 12
-    max_length: 32
+    max_length: 50
     dropout: 0.1
   text_embedding:
     common_vocab: /datastore/npl/ViInfographicCaps/workspace/baseline/DEVICE/DEVICE-Image-Captioning/data/vocab.txt
-    max_length: 32
+    max_length: 50
     return_tensors: pt
   adjust_optimizer:
     lr_scale: 0.1 # scale lr for finetuning modules

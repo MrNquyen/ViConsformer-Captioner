@@ -29,7 +29,7 @@ class ViInforgraphicDataset(Dataset):
         imdb = load_npy(imdb_path)
         self.data = []
         self.transform = Transform(image_size=448).transform_from_ndarray()
-        for item in tqdm(imdb[:10], desc=f"Loading {split} split"):
+        for item in tqdm(imdb, desc=f"Loading {split} split"):
             im_id = item["image_id"]
 
             #-- Load features path

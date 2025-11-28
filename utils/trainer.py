@@ -288,7 +288,7 @@ class Trainer():
         best_scores = -1
         while self.current_iteration < self.max_iterations:
             self.current_epoch += 1
-            self.writer.LOG_INFO(f"Training epoch: {self.current_epoch}")
+            self.writer.LOG_INFO(f"Training epoch: {self.current_epoch} - iteration: {self.current_iteration}")
             for batch_id, batch in tqdm(enumerate(self.train_loader), desc="Iterating through train loader"):
                 self.writer.LOG_INFO(f"Training batch: {batch_id + 1}")
                 batch = self.preprocess_batch(batch)
@@ -303,6 +303,7 @@ class Trainer():
                     list_captions, list_ocr_tokens
                 ).to(self.device)
                 loss = self._extract_loss(scores_output, targets)
+                ic(loss)
                 self._backward(loss)
                 
                 if self.current_iteration > self.max_iterations:
@@ -340,16 +341,16 @@ class Trainer():
                         metric_score=best_scores,
                         use_name=self.current_iteration
                     )
-                    self.save_model(
-                        model=self.model,
-                        loss=loss,
-                        optimizer=self.optimizer,
-                        lr_scheduler=self.lr_scheduler,
-                        epoch=self.current_epoch, 
-                        iteration=self.current_iteration,
-                        metric_score=best_scores,
-                        use_name="last"
-                    )
+                self.save_model(
+                    model=self.model,
+                    loss=loss,
+                    optimizer=self.optimizer,
+                    lr_scheduler=self.lr_scheduler,
+                    epoch=self.current_epoch, 
+                    iteration=self.current_iteration,
+                    metric_score=best_scores,
+                    use_name="last"
+                )
     
     
     def evaluate(self, epoch_id=None, split="val"):
@@ -379,6 +380,9 @@ class Trainer():
                     list_captions, list_ocr_tokens
                 ).to(self.device)
 
+                ic(scores_output.shape)
+                ic(targets.shape)
+                
                 loss = self._extract_loss(scores_output, targets)
                 loss_scalar = loss.detach().cpu().item()
                 ic(loss_scalar)
@@ -395,9 +399,7 @@ class Trainer():
                     ref[id]  = [ref_cap]
             
             # Calculate Metrics
-            # ic(ref, hypo)
             final_scores = metric_calculate(ref, hypo)
-            # ic(losses)
             avg_loss = sum(losses) / len(losses) 
             self.writer_evaluation.LOG_INFO(f"|| Metrics Calculation || {split} split || epoch: {epoch_id} || loss: {avg_loss}")
             self.writer_evaluation.LOG_INFO(f"Final scores:\n{final_scores}")
