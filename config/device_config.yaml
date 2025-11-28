@@ -21,7 +21,7 @@ model_attributes:
   image_dir: /datastore/npl/ViInfographicCaps/data/images
   model_clip: /datastore/npl/ViInfographicCaps/model/clip-vit-large-patch14
   fasttext_bin: ./utils/fasttext/wiki.vi.bin
-  object_concepts: 
+  pretrained: /datastore/npl/ViInfographicCaps/model/vit5-base
   model_decoder: /datastore/npl/ViInfographicCaps/model/phobert-base
   hidden_size: 768
   ocr:
