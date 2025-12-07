@@ -5,7 +5,6 @@ from torch import nn
 from typing import List
 
 from utils.registry import registry
-from utils.vocab import CustomVocab
 
 class Encoder(nn.Module):
     def __init__(self, tokenizer, encoder, max_length):
@@ -43,7 +42,7 @@ class Encoder(nn.Module):
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         return inputs # 'input_ids', 'token_type_ids', 'attention_mask'
-    
+
 
     def text_embedding(self, inputs):
         """

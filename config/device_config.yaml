@@ -5,9 +5,9 @@ dataset_attributes:
     val: /datastore/npl/ViInfographicCaps/data/swintextspotter, /datastore/npl/ViInfographicCaps/data/yolo_object
     test: /datastore/npl/ViInfographicCaps/data/swintextspotter, /datastore/npl/ViInfographicCaps/data/yolo_object
   imdb_files:
-    train: /datastore/npl/ViInfographicCaps/data/imdb/train_imdb_yolo_new.npy
-    val: /datastore/npl/ViInfographicCaps/data/imdb/val_imdb_yolo_new.npy
-    test: /datastore/npl/ViInfographicCaps/data/imdb/test_imdb_yolo_new.npy
+    train: /datastore/npl/ViInfographicCaps/data/imdb/train_imdb_yolo_new_no_segmented.npy
+    val: /datastore/npl/ViInfographicCaps/data/imdb/val_imdb_yolo_new_no_segmented.npy
+    test: /datastore/npl/ViInfographicCaps/data/imdb/test_imdb_yolo_new_no_segmented.npy
   depth_features:
     ocr_depth: /datastore/npl/ViInfographicCaps/data/data/depth_features/swintext_ocr_depth
     obj_depth: /datastore/npl/ViInfographicCaps/data/data/depth_features/yolo_depth
@@ -72,9 +72,12 @@ training_parameters:
     lr_ratio: 0.1
     use_warmup: True
     warmup_iterations: 1
-    warmup_factor: 0.5
+    warmup_epochs: 5
+    decay_factor: 0.3
+    lr_epoch_step_size: 10
   max_iterations: 9000
   snapshot_interval: 1000
+  epoch_snapshot_interval: 3
   metric_minimize: false
   seed: 2021
 

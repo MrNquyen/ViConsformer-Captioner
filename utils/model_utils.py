@@ -20,3 +20,16 @@ def lr_lambda_update(i_iter, cfg):
     else:
         idx = bisect(cfg["lr_steps"], i_iter)
         return pow(cfg["lr_ratio"], idx)
+
+
+def lr_lambda_update_epoch(current_epoch, cfg):
+    warmup_epochs = cfg["warmup_epochs"]
+    decay_factor = cfg["decay_factor"]
+    lr_epoch_step_size = cfg["lr_epoch_step_size"]
+
+    if current_epoch < warmup_epochs:
+        return float(current_epoch) / float(max(1, warmup_epochs))
+    else:
+        num_decays = (current_epoch - warmup_epochs) // lr_epoch_step_size
+        return decay_factor ** (num_decays)
+

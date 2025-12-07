@@ -6,3 +6,4 @@ utils/fasttext/wiki.vi.bin
 utils/pycocoevalcap
 __pycache__
 build
+save

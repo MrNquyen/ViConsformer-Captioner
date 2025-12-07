@@ -5,16 +5,14 @@ import numpy as np
 from torch import nn
 from PIL import Image
 from icecream import ic
-from transformers import CLIPProcessor, CLIPModel
 from torch.nn import functional as F
-from projects.modules.multimodal_embedding import ObjEmbedding, OCREmbedding, Sync, WordEmbedding
-from projects.modules.encoder import Encoder 
-from projects.modules.decoder import Decoder 
-from projects.modules.classifier import Classifier 
-from utils.configs import Config
+from projects.vit5_modules.multimodal_embedding import ObjEmbedding, OCREmbedding, Sync
+from projects.vit5_modules.encoder import Encoder 
+from projects.vit5_modules.decoder_mmt import Decoder 
+from projects.vit5_modules.classifier import Classifier 
 from utils.registry import registry
 from utils.module_utils import _batch_padding, _batch_padding_string
-from transformers import AutoTokenizer, AutoModel, AutoConfig
+from transformers import AutoTokenizer, AutoModel, AutoConfig, T5ForConditionalGeneration
 
 #---------- MODEL ----------
 class BaseModel(nn.Module):
@@ -80,10 +78,11 @@ class DEVICE(BaseModel):
         self.dim_ocr, self.dim_obj = self.ocr_config["dim"], self.obj_config["dim"]
         self.feature_dim = self.config["feature_dim"]
         self.hidden_size = self.config["hidden_size"]
+        self.max_dec_length = self.config["mutimodal_transformer"]["max_length"]
 
 
     def load_pretrained(self):
-        self.model_name = self.model_config["pretrained"]
+        self.model_name = self.config["pretrained"]
         ic(self.model_name)
         config = AutoConfig.from_pretrained(self.model_name)
 
@@ -120,38 +119,23 @@ class DEVICE(BaseModel):
         self.ocr_embedding = OCREmbedding()
 
         # Encoder
-        self.encoder = Encoder(
-            tokenizer=self.model_tokenizer,
+        self.encoder_caption = Encoder(
+            tokenizer=self.tokenizer,
             encoder=self.model_encoder, 
-            max_length=self.config["mutimodal_transformer"]["max_length"]
+            max_length=self.max_dec_length
+        )
+
+        self.encoder_ocr_tokens = Encoder(
+            tokenizer=self.tokenizer,
+            encoder=self.model_encoder, 
+            max_length=self.num_ocr
         )
 
         # Decoder
         self.decoder = Decoder(self.model_decoder)
 
         # Encoder
-        self.classifier = Classifier(self.model_classifer)
-
-        # Pointer-wise network
-        self.ocr_ptr_net = OcrPtrNet(
-            hidden_size=self.hidden_size,
-            query_key_size=self.classifer.get_vocab_size()
-        )
-
-
-    def load_pretrained(self):
-        self.roberta_model_name = self.config["model_decoder"]
-        roberta_config = AutoConfig.from_pretrained(self.roberta_model_name)
-        roberta_config.num_attention_heads = self.config["mutimodal_transformer"]["nhead"]
-        roberta_config.num_hidden_layers = self.config["mutimodal_transformer"]["num_layers"]
-        roberta_model = AutoModel.from_pretrained(
-            self.roberta_model_name, 
-            config=roberta_config
-        )
-        roberta_model.gradient_checkpointing_enable()
-        self.pretrained_model = roberta_model
-        self.pretrained_tokenizer = AutoTokenizer.from_pretrained(self.roberta_model_name)
-        self.roberta_config = roberta_config
+        self.classifier = Classifier(self.model_classifier)
 
 
     #---- ADJUST LR FOR SPECIFIC MODULES
@@ -237,17 +221,19 @@ class DEVICE(BaseModel):
         return optimizer_param_groups
 
 
-    # ---- FORWARD
     def forward_mmt(
         self,
         ocr_embed,
         obj_embed,
         ocr_mask,
         obj_mask,
+        ocr_tokens_embed_vit5,
+        ocr_tokens_attention_mask_vit5,
         semantic_ocr_tokens_feat,
         visual_object_concept_feat,
-        common_vocab_embed,
-        prev_inds,
+        decoder_input_ids,
+        decoder_attention_mask
+
     ):
         """
             Forward batch to model
@@ -258,27 +244,22 @@ class DEVICE(BaseModel):
             obj_mask=obj_mask,
             ocr_embed=ocr_embed,
             ocr_mask=ocr_mask,
+            ocr_tokens_embed_vit5=ocr_tokens_embed_vit5,
+            ocr_tokens_attention_mask_vit5=ocr_tokens_attention_mask_vit5,
             semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
             visual_object_concept_feat=visual_object_concept_feat,
-            common_vocab_embed=common_vocab_embed,
-            prev_inds=prev_inds,
+            decoder_input_ids=decoder_input_ids,
+            decoder_attention_mask=decoder_attention_mask
         )
-        mmt_results["ocr_mask"] = ocr_mask
         return mmt_results
     
 
     def forward_output(self, results):
-        mmt_dec_output = results['mmt_dec_output'] # BS, max_length, hidden_size
-        mmt_ocr_output = results['mmt_ocr_output'] # BS, num_ocr, hidden_size
-        ocr_mask = results['ocr_mask'] # BS, num_ocr
+        mmt_dec_output = results['vit5_dec_last_hidden_state'] # BS, max_length, hidden_size
 
         fixed_scores = self.classifier(mmt_dec_output) #  BS, max_length, num_vocab
-        dynamic_ocr_scores = self.ocr_ptr_net(
-            mmt_dec_output, mmt_ocr_output, ocr_mask
-        ) # BS, max_length, num_ocr
-        scores = torch.cat([fixed_scores, dynamic_ocr_scores], dim=-1) # BS, max_length, num_vocab + num_ocr
-        results['scores'] = scores
-        return scores
+        results['scores'] = fixed_scores
+        return fixed_scores
 
 
     def forward(self, batch):
@@ -290,102 +271,82 @@ class DEVICE(BaseModel):
         obj_mask = batch["obj_mask"]
         obj_embed_feat = self.obj_embedding(batch)
         ocr_feat_embed, semantic_ocr_tokens_feat, visual_object_concept_feat = self.ocr_embedding(batch)
-        common_vocab_embed = self.classifier.weight
 
-        vocab_size = common_vocab_embed.size(0)
-        num_ocr = ocr_mask.size(1)
+        #~ Embedding using ViT5
+        list_ocr_tokens_string = [" ".join(ocr_tokens) for ocr_tokens in batch["list_ocr_tokens"]]
+        ocr_tokens_inputs_vit5 = self.encoder_ocr_tokens.tokenize(list_ocr_tokens_string)        
+        ocr_tokens_embed_vit5 = self.encoder_ocr_tokens.text_embedding(ocr_tokens_inputs_vit5)        
+        ocr_tokens_attention_mask_vit5 = ocr_tokens_inputs_vit5["attention_mask"]     
+        
+        caption_inputs = self.encoder_caption.tokenize(batch["list_captions"])
+        caption_input_ids = caption_inputs["input_ids"]
+        caption_attention_mask = caption_inputs["attention_mask"]
+
+        #~ Shift for decoder
+        batch_size = ocr_tokens_embed_vit5.size(0)
+        vocab_size = self.classifier.get_vocab_size()
+
+            #~: Labels:     Tôi  là  AI  .  <EOS>
+        labels_input_ids = caption_input_ids.clone()
+        labels_input_ids[labels_input_ids == self.encoder_caption.get_pad_token_id()] = -100
 
         #-- Training and Inference
         if self.training:
-            #~ prev_inds
-            caption_inds = self.word_embedding.get_prev_inds(
-                sentences=batch["list_captions"],
-                ocr_tokens=batch["list_ocr_tokens"]
-            ).to(self.device)
+            #~ Decoder input: shift right (prepend pad_token, remove last token)
+            #~ Example: [Tôi, là, AI, ., <eos>] -> [<pad>, Tôi, là, AI, .]
+            shift_decoder_input_ids = self.decoder._shift_right(caption_input_ids.clone())
+            decoder_attention_mask = (shift_decoder_input_ids != self.encoder_caption.get_pad_token_id()).long()
+
             results = self.forward_mmt(
                 ocr_embed=ocr_feat_embed,
                 obj_embed=obj_embed_feat,
                 ocr_mask=ocr_mask,
                 obj_mask=obj_mask,
+                ocr_tokens_embed_vit5=ocr_tokens_embed_vit5,
+                ocr_tokens_attention_mask_vit5=ocr_tokens_attention_mask_vit5,
                 semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
                 visual_object_concept_feat=visual_object_concept_feat,
-                common_vocab_embed=common_vocab_embed,
-                prev_inds=caption_inds
+                decoder_input_ids=shift_decoder_input_ids,
+                decoder_attention_mask=decoder_attention_mask
+
             )
             scores = self.forward_output(results)
-            return scores, caption_inds
+            return scores, caption_input_ids, labels_input_ids
         else:
-            num_dec_step = self.word_embedding.max_length
-            # Init prev_ids with <s> idx at begin, else where with <pad> (at idx 0)
-            start_idx = self.word_embedding.common_vocab.get_start_index() 
-            pad_idx = self.word_embedding.common_vocab.get_pad_index()
-            batch_size = obj_embed_feat.size(0)
+            #~ Greedy Search
+            eos_id = self.encoder_caption.get_eos_token_id()
+            pad_id = self.encoder_caption.get_pad_token_id()
 
-            prev_inds = torch.full((batch_size, num_dec_step), pad_idx).to(self.device)
-            prev_inds[:, 0] = start_idx
-            scores = torch.zeros((batch_size, num_dec_step, vocab_size + num_ocr)).to(self.device)
-
-            for i in range(num_dec_step):
-                results = self.forward_mmt(
-                    ocr_embed=ocr_feat_embed,
-                    obj_embed=obj_embed_feat,
-                    ocr_mask=ocr_mask,
-                    obj_mask=obj_mask,
-                    semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
-                    visual_object_concept_feat=visual_object_concept_feat,
-                    common_vocab_embed=common_vocab_embed,
-                    prev_inds=prev_inds
+            with torch.no_grad():
+                scores = torch.zeros((batch_size, self.max_dec_length, vocab_size), device=self.device)
+                decoder_input_ids = torch.full(
+                    (batch_size, 1),
+                    fill_value=pad_id,
+                    dtype=torch.long,
+                    device=self.device
                 )
-                step_score = self.forward_output(results)
-                argmax_inds = step_score.argmax(dim=-1)
-                prev_inds[:, i] = argmax_inds[:, i]
-                scores[:, i, :] = step_score[:, i, :]
-            return scores, prev_inds
 
+                #~ Iterate through max decoder length
+                for step in range(self.max_dec_length):
+                    decoder_attention_mask = (decoder_input_ids != pad_id).long()
+                    results = self.forward_mmt(
+                        ocr_embed=ocr_feat_embed,
+                        obj_embed=obj_embed_feat,
+                        ocr_mask=ocr_mask,
+                        obj_mask=obj_mask,
+                        ocr_tokens_embed_vit5=ocr_tokens_embed_vit5,
+                        ocr_tokens_attention_mask_vit5=ocr_tokens_attention_mask_vit5,
+                        semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
+                        visual_object_concept_feat=visual_object_concept_feat,
+                        decoder_input_ids=decoder_input_ids,
+                        decoder_attention_mask=decoder_attention_mask
+                    )
+                    step_scores = self.forward_output(results=results)
+                    argmax_inds = step_scores.argmax(dim=-1).unsqueeze(-1)
 
+                    #~ Assign
+                    scores[:, step, :] = step_scores[:, -1, :]
+                    decoder_input_ids = torch.concat([decoder_input_ids, argmax_inds[:, -1]], dim=1)
 
-# ----- DYNAMIC POINTER NETWORK -----
-class OcrPtrNet(nn.Module):
-    def __init__(self, hidden_size, query_key_size=None):
-        super().__init__()
-
-        if query_key_size is None:
-            query_key_size = hidden_size
-        self.hidden_size = hidden_size
-        self.query_key_size = query_key_size
-
-        self.query = nn.Linear(hidden_size, query_key_size)
-        self.key = nn.Linear(hidden_size, query_key_size)
-
-
-    def forward(self, query_inputs, key_inputs, attention_mask):
-        """
-            Parameters:
-            ----------
-                query_inputs    # BS, max_length, hidden_size
-                key_inputs      # BS, num_ocr, hidden_size
-                attention_mask  # BS, num_ocr
-        """
-        extended_attention_mask = (1.0 - attention_mask) * -10000.0
-        extended_attention_mask = attention_mask.unsqueeze(1)
-
-        query_layer = self.query(query_inputs) # -> To vocab_size
-        if query_layer.dim() == 2:
-            query_layer = query_layer.unsqueeze(1)
-            squeeze_result = True
-        else:
-            squeeze_result = False
-        key_layer = self.key(key_inputs) # -> To vocab_size
-
-        scores = torch.matmul(
-            query_layer, 
-            key_layer.transpose(-1, -2)
-        )
-        scores = scores / math.sqrt(self.query_key_size)
-        scores = scores + extended_attention_mask
-        if squeeze_result:
-            scores = scores.squeeze(1)
-
-        return scores
-
-
+                # gen_ids = decoder_input_ids[:, 1:] #-- Ignore the first pad token
+                return scores, decoder_input_ids, labels_input_ids
