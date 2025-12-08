@@ -22,6 +22,9 @@ class SceneTextEmbedding(BaseEmbedding):
             out_features=self.hidden_size
         )
 
+        self.gelu = nn.GELU()
+        self.dropout = nn.Dropout(0.1)
+
 
     def forward(
         self, 
@@ -35,5 +38,7 @@ class SceneTextEmbedding(BaseEmbedding):
         linear_feat_out = self.layernorm_feat(self.linear_feat(list_ocr_feat))
         linear_ocr_vit5_out = self.linear_ocr_vit5(ocr_tokens_embed_vit5)
 
-        return linear_box_out + linear_feat_out + linear_ocr_vit5_out
+        ocr_features = linear_box_out + linear_feat_out + linear_ocr_vit5_out
+        ocr_features = self.dropout(self.gelu(ocr_features))
 
+        return ocr_features

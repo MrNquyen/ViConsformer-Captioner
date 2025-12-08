@@ -8,15 +8,7 @@ dataset_attributes:
     train: /datastore/npl/ViInfographicCaps/data/imdb/train_imdb_yolo_new_no_segmented.npy
     val: /datastore/npl/ViInfographicCaps/data/imdb/val_imdb_yolo_new_no_segmented.npy
     test: /datastore/npl/ViInfographicCaps/data/imdb/test_imdb_yolo_new_no_segmented.npy
-  depth_features:
-    ocr_depth: /datastore/npl/ViInfographicCaps/data/data/depth_features/swintext_ocr_depth
-    obj_depth: /datastore/npl/ViInfographicCaps/data/data/depth_features/yolo_depth
-  clip_features:
-    images_features: /datastore/npl/ViInfographicCaps/data/data/clip/images_feat
-  object_concepts:
-    object_concepts_en: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_en.txt
-    object_concepts_vi: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_vi.txt
-    
+
 model_attributes:
   image_dir: /datastore/npl/ViInfographicCaps/data/images
   model_clip: /datastore/npl/ViInfographicCaps/model/clip-vit-large-patch14
@@ -24,6 +16,10 @@ model_attributes:
   pretrained: /datastore/npl/ViInfographicCaps/model/vit5-base
   model_decoder: /datastore/npl/ViInfographicCaps/model/phobert-base
   hidden_size: 768
+  spatial_circle_position:
+    num_grid_patches: 11
+    num_distances: 32
+    num_heads: 12
   ocr:
     dim: 256
     num_ocr: 100
@@ -31,24 +27,13 @@ model_attributes:
     dim: 320
     num_obj: 100
   feature_dim: 2048 # d
-  defum:
-    num_layers: 2 
-    activation: relu
-    nhead: 8
-  svoce:
-    top_k: 15
-    vocab_path_en: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_en.txt
-    vocab_path_vi: /datastore/npl/ViInfographicCaps/data/data/dataset_class/open_images_class_vi.txt
-    object_concepts_features: /datastore/npl/ViInfographicCaps/data/data/clip/open_image_feat
+  
   mutimodal_transformer:
     num_layers: 4
     nhead: 12
     max_length: 50
     dropout: 0.1
-  text_embedding:
-    common_vocab: /datastore/npl/ViInfographicCaps/workspace/baseline/DEVICE/DEVICE-Image-Captioning/data/vocab.txt
-    max_length: 50
-    return_tensors: pt
+  
   adjust_optimizer:
     lr_scale: 0.1 # scale lr for finetuning modules
 optimizer_attributes:
