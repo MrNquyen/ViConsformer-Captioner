@@ -60,9 +60,6 @@ class ViInforgraphicDataset(Dataset):
                 "ocr_feat": ocr_feat.item()["det_features"],
                 "obj_feat": obj_feat,
                 "caption_str": item["caption_str"],
-                "ocr_depth_feat": ocr_depth_feat,
-                "obj_depth_feat": obj_depth_feat,
-                "clip_image_feat": clip_image_feat,
             })
 
 
@@ -86,9 +83,6 @@ def collate_fn(batch):
     list_ocr_feat = [item["ocr_feat"] for item in batch]
     list_obj_feat = [item["obj_feat"] for item in batch]
     list_captions = [item["caption_str"] for item in batch]
-    list_ocr_depth_feat = [item["ocr_depth_feat"] for item in batch]
-    list_obj_depth_feat = [item["obj_depth_feat"] for item in batch]
-    list_clip_image_feat = [item["clip_image_feat"] for item in batch]
 
     return {
         "list_id": list_id,
@@ -102,10 +96,7 @@ def collate_fn(batch):
         "list_caption_tokens": list_caption_tokens,
         "list_ocr_feat": list_ocr_feat,
         "list_obj_feat": list_obj_feat,
-        "list_captions": list_captions,
-        "list_ocr_depth_feat": list_ocr_depth_feat,
-        "list_obj_depth_feat": list_obj_depth_feat,
-        "list_clip_image_feat": list_clip_image_feat,
+        "list_captions": list_captions
     }
 
 
