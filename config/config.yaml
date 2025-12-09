@@ -22,6 +22,9 @@ model_attributes:
     num_grid_patches: 11
     num_distances: 32
     num_heads: 12
+
+  constituent_module:
+    num_heads: 12
   
   ocr:
     dim: 256
