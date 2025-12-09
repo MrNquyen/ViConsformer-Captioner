@@ -1,6 +1,9 @@
 import torch
+import math
 from torch import nn
 from vit5_modules.base import BaseEmbedding
+
+from utils.registry import registry
 
 
 class SpartialCirclePosition(nn.Module):
@@ -43,7 +46,7 @@ class SpartialCirclePosition(nn.Module):
         distances = (torch.sqrt(dx**2 + dy**2) * 2).long()
         distances = torch.clamp(
             distances, 
-            min=0
+            min=0,
             max=self.num_distances - 1,
         )
         return distances # (BS, M, M) 
@@ -68,7 +71,7 @@ class SpartialCirclePosition(nn.Module):
         #-- Setting lower, upper bounds for width and height
         #-- Lowest height and width is 0
         patch_indexs = torch.arange(start=0, end=num_grid_patches, step=1) # Index of patch on grid
-        patch_indexs = .unsqueeze(0).repeat(batch_size, 1)
+        patch_indexs = patch_indexs.unsqueeze(0).repeat(batch_size, 1)
         lower_patch_indexs = patch_indexs[:, :-1]
         upper_patch_indexs = patch_indexs[:, 1:]
 

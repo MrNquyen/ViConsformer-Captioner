@@ -16,23 +16,29 @@ model_attributes:
   pretrained: /datastore/npl/ViInfographicCaps/model/vit5-base
   model_decoder: /datastore/npl/ViInfographicCaps/model/phobert-base
   hidden_size: 768
+  feature_dim: 2048 # d
+
   spatial_circle_position:
     num_grid_patches: 11
     num_distances: 32
     num_heads: 12
+  
   ocr:
     dim: 256
     num_ocr: 100
+  
   obj:
     dim: 320
     num_obj: 100
-  feature_dim: 2048 # d
   
   mutimodal_transformer:
     num_layers: 4
     nhead: 12
     max_length: 50
     dropout: 0.1
+
+  vi_constituent_module:
+    pass: 512
   
   adjust_optimizer:
     lr_scale: 0.1 # scale lr for finetuning modules
