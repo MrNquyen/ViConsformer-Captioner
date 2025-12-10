@@ -109,7 +109,7 @@ class OCREncoderLayer(BaseEmbedding):
         )
         self.constituent_module = ViConstituentModule()
         self.layer_connection = clones(
-            module=SublayerConnection(size=self.hidden_state)
+            module=SublayerConnection(size=self.hidden_state),
             N=2
         )
         
@@ -126,7 +126,7 @@ class OCREncoderLayer(BaseEmbedding):
         """
         # attn_gate: Xác suất nhóm tích lũy với toàn bộ token
         # neibor_attn: Xác suất ảnh hưởng đối với neighbor liền kề only
-        attn_gate, neibor_attn = self.constituent_module(ocr_features, attn_mask, attn_gate)
+        attn_gate, neibor_attn = self.constituent_module(ocr_features, ocr_mask, attn_gate)
         semantic_ocr_features = self.self_attn(
             queries=ocr_features,
             keys=ocr_features,
@@ -135,7 +135,7 @@ class OCREncoderLayer(BaseEmbedding):
             attn_mask=ocr_mask
         )
         #-- Smooth and enhance semantic embedding
-        semantic_ocr_features = self.layer_connection[0](input_feat=ocr_features, layer_output=self_attn_embed)
+        semantic_ocr_features = self.layer_connection[0](input_feat=ocr_features, layer_output=semantic_ocr_features)
         semantic_ocr_ffn_features = self.ffn(semantic_ocr_features)
         semantic_ocr_features = self.layer_connection[1](input_feat=semantic_ocr_features, layer_output=semantic_ocr_ffn_features)
         return semantic_ocr_features, attn_gate, neibor_attn

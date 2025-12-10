@@ -9,6 +9,7 @@ from torch.nn import functional as F
 from projects.vit5_modules_new.multimodal_embedding import OBJEmbedding, OCREmbedding, Sync
 from projects.vit5_modules_new.encoder import ViConsformerEncoder 
 from projects.vit5_modules_new.decoder_mmt import Decoder 
+from projects.vit5_modules_new.tokenizer import WordTokenizer 
 from projects.vit5_modules_new.classifier import Classifier 
 from utils.registry import registry
 from utils.module_utils import _batch_padding, _batch_padding_string
@@ -78,7 +79,7 @@ class ViConsformer(BaseModel):
         self.dim_ocr, self.dim_obj = self.ocr_config["dim"], self.obj_config["dim"]
         self.feature_dim = self.config["feature_dim"]
         self.hidden_size = self.config["hidden_size"]
-        self.max_dec_length = self.config["mutimodal_transformer"]["max_length"]
+        self.max_dec_length = self.config["max_length"]
 
 
     def load_pretrained(self):
@@ -115,13 +116,14 @@ class ViConsformer(BaseModel):
         )
 
     def build_layers(self):
+        self.decoder = Decoder(self.model_decoder)
+        self.classifier = Classifier(self.model_classifier)
+        self.word_tokenizer = WordTokenizer(self.tokenizer)
         self.encoder = ViConsformerEncoder(
-            tokenizer=self.tokenizer,
+            word_tokenizer=self.word_tokenizer,
             encoder_embed_tokens_layer=self.encoder_embed_tokens_layer,
             encoder_block_layer=self.encoder_block_layer
         )
-        self.decoder = Decoder(self.model_decoder)
-        self.classifier = Classifier(self.model_classifier)
 
 
     #---- ADJUST LR FOR SPECIFIC MODULES
@@ -209,14 +211,8 @@ class ViConsformer(BaseModel):
 
     def forward_mmt(
         self,
-        ocr_embed,
-        obj_embed,
-        ocr_mask,
-        obj_mask,
-        ocr_tokens_embed_vit5,
-        ocr_tokens_attention_mask_vit5,
-        semantic_ocr_tokens_feat,
-        visual_object_concept_feat,
+        encoder_output_embed,
+        encoder_output_mask,
         decoder_input_ids,
         decoder_attention_mask
 
@@ -226,14 +222,8 @@ class ViConsformer(BaseModel):
         """
         # -- Decoder
         mmt_results: dict  = self.decoder(
-            obj_embed=obj_embed,
-            obj_mask=obj_mask,
-            ocr_embed=ocr_embed,
-            ocr_mask=ocr_mask,
-            ocr_tokens_embed_vit5=ocr_tokens_embed_vit5,
-            ocr_tokens_attention_mask_vit5=ocr_tokens_attention_mask_vit5,
-            semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
-            visual_object_concept_feat=visual_object_concept_feat,
+            encoder_output_embed=encoder_output_embed,
+            encoder_output_mask=encoder_output_mask,
             decoder_input_ids=decoder_input_ids,
             decoder_attention_mask=decoder_attention_mask
         )
@@ -257,12 +247,15 @@ class ViConsformer(BaseModel):
         encoder_output_embed = encoder_outputs.last_hidden_state
         encoder_output_mask = encoder_outputs.attention_mask
 
-        caption_inputs = self.encoder_caption.tokenize(batch["list_captions"])
+        caption_inputs = self.word_tokenizer.tokenize(
+            texts=batch["list_captions"],
+            max_length=self.max_dec_length
+        )
         caption_input_ids = caption_inputs["input_ids"]
         caption_attention_mask = caption_inputs["attention_mask"]
 
         #~ Shift for decoder
-        batch_size = ocr_tokens_embed_vit5.size(0)
+        batch_size = encoder_output_embed.size(0)
         vocab_size = self.classifier.get_vocab_size()
 
             #~: Labels:     Tôi  là  AI  .  <EOS>
@@ -277,14 +270,8 @@ class ViConsformer(BaseModel):
             decoder_attention_mask = (shift_decoder_input_ids != self.encoder_caption.get_pad_token_id()).long()
 
             results = self.forward_mmt(
-                ocr_embed=ocr_feat_embed,
-                obj_embed=obj_embed_feat,
-                ocr_mask=ocr_mask,
-                obj_mask=obj_mask,
-                ocr_tokens_embed_vit5=ocr_tokens_embed_vit5,
-                ocr_tokens_attention_mask_vit5=ocr_tokens_attention_mask_vit5,
-                semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
-                visual_object_concept_feat=visual_object_concept_feat,
+                encoder_output_embed=encoder_output_embed,
+                encoder_output_mask=encoder_output_mask,
                 decoder_input_ids=shift_decoder_input_ids,
                 decoder_attention_mask=decoder_attention_mask
 
@@ -309,14 +296,8 @@ class ViConsformer(BaseModel):
                 for step in range(self.max_dec_length):
                     decoder_attention_mask = (decoder_input_ids != pad_id).long()
                     results = self.forward_mmt(
-                        ocr_embed=ocr_feat_embed,
-                        obj_embed=obj_embed_feat,
-                        ocr_mask=ocr_mask,
-                        obj_mask=obj_mask,
-                        ocr_tokens_embed_vit5=ocr_tokens_embed_vit5,
-                        ocr_tokens_attention_mask_vit5=ocr_tokens_attention_mask_vit5,
-                        semantic_ocr_tokens_feat=semantic_ocr_tokens_feat,
-                        visual_object_concept_feat=visual_object_concept_feat,
+                        encoder_output_embed=encoder_output_embed,
+                        encoder_output_mask=encoder_output_mask,
                         decoder_input_ids=decoder_input_ids,
                         decoder_attention_mask=decoder_attention_mask
                     )

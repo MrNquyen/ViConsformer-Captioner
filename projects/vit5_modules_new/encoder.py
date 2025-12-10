@@ -1,9 +1,12 @@
 import torch
+
+from typing import Optional, List
 from torch import nn
 from vit5_modules.attention import SpartialCirclePosition
 
 from vit5_modules.scene_text_embedding import SceneTextEmbedding
-from vit5_modules.multimodal_embedding import OCREncoder, OBJEmbedding
+from vit5_modules_new.tokenizer import WordTokenizer
+from vit5_modules.multimodal_embedding import OCREncoder, OBJEncoder
 from transformers.models.t5.modeling_t5 import *
 from utils.registry import registry
 
@@ -21,7 +24,7 @@ class CustomBaseModelOutputWithPastAndCrossAttentions(BaseModelOutputWithPastAnd
 class ViConsformerEncoder(T5Stack):
     def __init__(
         self,
-        tokenizer,
+        word_tokenizer,
         encoder_embed_tokens_layer,
         encoder_block_layer
     ):
@@ -30,10 +33,10 @@ class ViConsformerEncoder(T5Stack):
         self.model_config = registry.get_config("model_attributes")
         self.device = registry.get_args("device")
         self.hidden_size = self.model_config["hidden_size"]
-        self.max_length = max_length
+        self.max_length = self.model_config["max_length"]
         self.build_config()
 
-        self.tokenizer = tokenizer
+        self.word_tokenizer = word_tokenizer
         self.embed_tokens = encoder_embed_tokens_layer
         self.block = encoder_block_layer
 
@@ -44,47 +47,6 @@ class ViConsformerEncoder(T5Stack):
     def build_config(self):
         self.ocr_config = self.model_config["ocr"]
         self.obj_config = self.model_config["obj"]
-
-
-    def tokenize(
-        self, 
-        texts: List[str], 
-        max_length: int = None,
-        to_batch_max_length: bool = False,
-    ):
-        """
-            Args:
-                - texts: (str): Batch of texts
-
-            Return:
-                - dict: Text input has 'input_ids', 'attention_mask'
-
-            Example: 
-                - Return a dict = {
-                    'input_ids': ..., 
-                    'attention_mask': ...,
-                }
-        """
-        if not to_batch_max_length:
-            if not max_length:
-                max_length = self.max_length
-            inputs = self.tokenizer(
-                texts,
-                truncation=True,
-                padding="max_length",
-                max_length=max_length,
-                return_tensors="pt"        # return PyTorch tensors directly
-            )
-        else:
-            inputs = self.tokenizer(
-                texts,
-                truncation=True,
-                padding=True,
-                return_tensors="pt"        # return PyTorch tensors directly
-            )
-
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        return inputs # 'input_ids', 'token_type_ids', 'attention_mask'
 
     
     def forward(
@@ -146,7 +108,7 @@ class ViConsformerEncoder(T5Stack):
 
         #~ Question Embedding
         if input_ids is None:
-            inputs = self.tokenize(list_questions, to_batch_max_length=True)
+            inputs = self.word_tokenizer.tokenize(list_questions, to_batch_max_length=True)
             input_ids = inputs["input_ids"]
             attention_mask = inputs["attention_mask"]
         question_features = self.embed_tokens(input_ids)
