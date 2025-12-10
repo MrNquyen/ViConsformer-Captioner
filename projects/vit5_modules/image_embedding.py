@@ -17,7 +17,6 @@ class ImageEmbedding(BaseEmbedding):
             out_features=self.hidden_size
         )
 
-
     def forward(self, batch):
         list_obj_boxes = batch["list_obj_boxes"]
         list_obj_feat = batch["list_obj_feat"]

@@ -17,6 +17,7 @@ model_attributes:
   model_decoder: /datastore/npl/ViInfographicCaps/model/phobert-base
   hidden_size: 768
   feature_dim: 2048 # d
+  max_length: 50
 
   ocr:
     dim: 256
@@ -40,7 +41,6 @@ model_attributes:
   mutimodal_transformer:
     num_layers: 4
     nhead: 12
-    max_length: 50
     dropout: 0.1
   
   adjust_optimizer:

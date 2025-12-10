@@ -6,10 +6,10 @@ from torch import nn
 from PIL import Image
 from icecream import ic
 from torch.nn import functional as F
-from projects.vit5_modules.multimodal_embedding import OBJEmbedding, OCREmbedding, Sync
-from projects.vit5_modules.encoder import Encoder 
-from projects.vit5_modules.decoder_mmt import Decoder 
-from projects.vit5_modules.classifier import Classifier 
+from projects.vit5_modules_new.multimodal_embedding import OBJEmbedding, OCREmbedding, Sync
+from projects.vit5_modules_new.encoder import ViConsformerEncoder 
+from projects.vit5_modules_new.decoder_mmt import Decoder 
+from projects.vit5_modules_new.classifier import Classifier 
 from utils.registry import registry
 from utils.module_utils import _batch_padding, _batch_padding_string
 from transformers import AutoTokenizer, AutoModel, AutoConfig, T5ForConditionalGeneration
@@ -99,6 +99,9 @@ class ViConsformer(BaseModel):
         self.model_decoder = self.model.decoder
         self.model_classifier = self.model.lm_head
 
+        self.encoder_embed_tokens_layer = self.model_encoder.embed_tokens
+        self.encoder_block_layer = self.model_encoder.block
+
 
     def build_sync(self):
         self.sync_ocr = Sync(
@@ -112,29 +115,12 @@ class ViConsformer(BaseModel):
         )
 
     def build_layers(self):
-        # Encoder
-        self.encoder_caption = Encoder(
+        self.encoder = ViConsformerEncoder(
             tokenizer=self.tokenizer,
-            encoder=self.model_encoder, 
-            max_length=self.max_dec_length
+            encoder_embed_tokens_layer=self.encoder_embed_tokens_layer,
+            encoder_block_layer=self.encoder_block_layer
         )
-
-        self.encoder_ocr_tokens = Encoder(
-            tokenizer=self.tokenizer,
-            encoder=self.model_encoder, 
-            max_length=self.num_ocr
-        )
-
-        # Object embedding
-        self.obj_embedding = ObjEmbedding()
-
-        # OCR Embedding
-        self.ocr_embedding = OCREmbedding(encoder_ocr_tokens=self.encoder_ocr_tokens)
-
-        # Decoder
         self.decoder = Decoder(self.model_decoder)
-
-        # Encoder
         self.classifier = Classifier(self.model_classifier)
 
 
@@ -267,17 +253,10 @@ class ViConsformer(BaseModel):
         batch = self.sync_ocr_obj(batch)
 
         #-- Forward to layer
-        ocr_mask = batch["ocr_mask"]
-        obj_mask = batch["obj_mask"]
-        obj_embed_feat = self.obj_embedding(batch)
-        ocr_feat_embed, semantic_ocr_tokens_feat, visual_object_concept_feat = self.ocr_embedding(batch)
+        encoder_outputs = self.encoder(batch)
+        encoder_output_embed = encoder_outputs.last_hidden_state
+        encoder_output_mask = encoder_outputs.attention_mask
 
-        #~ Embedding using ViT5
-        list_ocr_tokens_string = [" ".join(ocr_tokens) for ocr_tokens in batch["list_ocr_tokens"]]
-        ocr_tokens_inputs_vit5 = self.encoder_ocr_tokens.tokenize(list_ocr_tokens_string)        
-        ocr_tokens_embed_vit5 = self.encoder_ocr_tokens.text_embedding(ocr_tokens_inputs_vit5)        
-        ocr_tokens_attention_mask_vit5 = ocr_tokens_inputs_vit5["attention_mask"]     
-        
         caption_inputs = self.encoder_caption.tokenize(batch["list_captions"])
         caption_input_ids = caption_inputs["input_ids"]
         caption_attention_mask = caption_inputs["attention_mask"]

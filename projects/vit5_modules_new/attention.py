@@ -192,16 +192,15 @@ class ScaledDotProductAttention(nn.Module):
 
 # ================ ViConstituentModule =============================
 class ViConstituentModule(nn.Module):
-    def __init__(self):
+    def __init__(
+            self, 
+            config,
+        ):
         super(ViConstituentModule, self).__init__()
 
-        self.writer = registry.get_writer("common")
-        self.model_config = registry.get_config("model_attributes")
-        self.device = registry.get_args("device")
-
-        self.constituent_config = self.model_config["constituent_config"]
-        self.num_ocr = self.model_config["ocr"]["num_ocr"]
-        self.hidden_state = self.model_config["hidden_state"]
+        self.constituent_config = config
+        self.num_ocr = self.config["ocr"]["num_ocr"]
+        self.hidden_state = self.config["hidden_state"]
         self.num_heads = self.constituent_config["num_heads"]
 
         self.head_dim = self.hidden_size // self.num_heads
@@ -212,7 +211,7 @@ class ViConstituentModule(nn.Module):
         self.v_linear = nn.Linear(self.hidden_size, self.num_heads * self.head_dim)
 
 
-    def forward(self, batch, ocr_features, ocr_features_mask, attn_gate):
+    def forward(self, batch, ocr_features, ocr_features_mask, prior):
         """
             Args:
                 ocr_features (BS, M, hidden_size) 
@@ -243,7 +242,7 @@ class ViConstituentModule(nn.Module):
         neibor_attn = torch.softmax(neibor_attn, dim=-1) # (BS, num_heads, M, M)
             #~ Nhân cho đối xứng của nó - Tuy nhiên sẽ tạo ra 2 lần nhân đối xứng => Cần chia 2 khi cummulative sum
         neibor_attn = torch.sqrt(neibor_attn * neibor_attn.transpose(3, 2)+ self.eps) # Avoid sqrt for 0
-        neibor_attn = attn_gate + (1. - attn_gate) * neibor_attn # (BS, num_heads, M, M)
+        neibor_attn = prior + (1. - prior) * neibor_attn # (BS, num_heads, M, M)
 
             #~ Cummulative sum
         tri_matrix = torch.triu(torch.ones(num_ocr, num_ocr), diagonal = 0).float().to(self.device)
@@ -254,30 +253,3 @@ class ViConstituentModule(nn.Module):
         return g_attn, neibor_attn # (BS, num_heads, M, M), (BS, num_heads, M, M)
 
 
-class PositionwiseFeedForward(nn.Module):
-    """Implements FFN equation."""
-    def __init__(self, d_model, d_ff, dropout=0.1):
-        super(PositionwiseFeedForward, self).__init__()
-        self.w_1 = nn.Linear(d_model, d_ff)
-        self.w_2 = nn.Linear(d_ff, d_model)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x):
-        return self.w_2(self.dropout(F.gelu(self.w_1(x))))
-
-
-class SublayerConnection(nn.Module):
-    """
-        A residual connection followed by a layer norm.
-        Note for code simplicity the norm is first as opposed to last.
-    """
-    def __init__(self, size, dropout):
-        super(SublayerConnection, self).__init__()
-        self.norm = nn.LayerNorm(size)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x, sublayer):
-        """
-            Apply residual connection to any sublayer with the same size.
-        """
-        return x + self.dropout(sublayer(self.norm(x)))

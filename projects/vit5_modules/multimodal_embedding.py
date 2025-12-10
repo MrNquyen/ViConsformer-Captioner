@@ -31,6 +31,14 @@ class Sync(nn.Module):
         return self.sync(feats)
 
 
+#----------Word Tokenizer----------
+class WordTokenizer:
+    def __init__(self, tokenizer):
+        pass
+
+    
+
+
 #----------Embedding----------
 class BaseEmbedding(nn.Module):
     def __init__(self):
@@ -73,18 +81,28 @@ class OCREmbedding(BaseEmbedding):
         
 
 
-class OBJEmbedding(BaseEmbedding):
+class OBJEncoder(BaseEmbedding):
     def __init__(self):
-        super().__init__()
-        self.image_embedding = ImageEmbedding()
-
-    def forward(self):
-        obj_features = self.image_embedding(batch)
-        obj_spatial_att_embed = self.spatial_circle_position(
-            batch=batch, 
-            features=obj_features,
-            list_boxes=batch["list_obj_boxes"],
-            features_mask=batch["obj_mask"]
+        super().init()
+        self.layernorm_feat = nn.LayerNorm(self.hidden_size)
+        self.linear_feat = nn.Linear(
+            in_features=self.hidden_size,
+            out_features=self.hidden_size
         )
-        return obj_spatial_att_embed
+
+        self.layernorm_box = nn.LayerNorm(self.hidden_size)
+        self.linear_box = nn.Linear(
+            in_features=4,
+            out_features=self.hidden_size
+        )
+
+
+    def forward(self, batch):
+        list_obj_boxes = batch["list_obj_boxes"]
+        list_obj_feat = batch["list_obj_feat"]
+
+        linear_box_out = self.layernorm_box(self.linear_box(list_obj_boxes))
+        linear_feat_out = self.layernorm_feat(self.linear_feat(list_obj_feat))
+
+        return self.dropout(self.gelu(linear_box_out + linear_feat_out))
 
