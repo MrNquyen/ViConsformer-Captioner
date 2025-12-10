@@ -1,5 +1,6 @@
 
 import torch
+import copy
 from torch import nn
 from typing import List
 
@@ -8,8 +9,10 @@ from time import time
 from icecream import ic
 
 from vit5_modules.scene_text_embedding import SceneTextEmbedding
-from vit5_modules.attention import SpartialCirclePosition, ScaledDotProductAttention
+from vit5_modules.attention import SpartialCirclePosition, ViConstituentModule, ScaledDotProductAttention, PositionwiseFeedForward, SublayerConnection
 from vit5_modules.image_embedding import ImageEmbedding
+
+from utils.registry import registry
 
 
 #----------UTILS----------
@@ -42,10 +45,10 @@ class Sync(nn.Module):
 class BaseEmbedding(nn.Module):
     def __init__(self):
         super().__init__()
-        self.config = config
-        self.device = device
-        self.hidden_size = config["hidden_size"]
-        self.common_dim = config["feature_dim"]
+        self.config = registry.get_config("model_attributes")
+        self.device = registry.get_args("device")
+        self.hidden_size = self.config["hidden_size"]
+        self.common_dim = self.config["feature_dim"]
 
         self.gelu = nn.GELU()
         self.dropout = nn.Dropout(0.1)
@@ -91,17 +94,35 @@ class OCRTokenEncoder(BaseEmbedding):
 
 class OCRTokenEncoderLayers(BaseEmbedding):
     def __init__(self):
-        pass
-
-    def forward(self):
-        """
-            Layer 
+        """ 
             Contains:
                 - GroupAttention            : GroupAttention is constituate modules (using multihead)
                 - ScaledDotProductAttention : Attention Between Q, K, V adding group probs (using multihead)
                 - PositionwiseFeedForward   : Position Embedding
                 - SublayerConnection        : Residual Connection through Layer
         """
+        self.ocr_config = self.config["ocr"]
+        self.constituent_module_config = self.ocr_config["constituent_module"]
+        self.spatial_circle_position_config = self.ocr_config["spatial_circle_position"]
+        self.self_attn_config = self.ocr_config["self_attn"]
+        self.poswise_ffn_config = self.ocr_config["poswise_ffn"]
+
+        self.constituent_module = ViConstituentModule(
+            config=self.constituent_module_config,
+            
+        )
+        self.self_attn = ScaledDotProductAttention(
+            num_heads=self.self_attn_config["num_heads"],
+            d_model=self.hidden_size
+        )
+        self.poswise_ffn = PositionwiseFeedForward(
+            d_model=self.hidden_size,
+            d_ff=self.poswise_ffn_config["ffn_dim"],
+        )
+        self.layer_residual_connection = clones(SublayerConnection, 2)
+    
+    
+    def forward(self):
         pass
 
         
@@ -112,7 +133,7 @@ class OBJEmbedding(BaseEmbedding):
         super().__init__()
         self.image_embedding = ImageEmbedding()
 
-    def forward(self):
+    def forward(self, batch):
         obj_features = self.image_embedding(batch)
         obj_spatial_att_embed = self.spatial_circle_position(
             batch=batch, 

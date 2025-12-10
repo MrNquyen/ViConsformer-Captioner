@@ -9,6 +9,7 @@ from utils.registry import registry
 # ================ SpartialCirclePosition =============================
 class SpartialCirclePosition(nn.Module):
     def __init__(self):
+        super(SpartialCirclePosition, self).__init__()
         self.config = registry.get_config("model_attributes")
         self.device = registry.get_args("device")
         self.writer = registry.get_writer("common")
@@ -143,6 +144,7 @@ class SpartialCirclePosition(nn.Module):
 # ================ ScaledDotProductAttention =============================
 class ScaledDotProductAttention(nn.Module):
     def __init__(self, num_heads, d_model):
+        super(ScaledDotProductAttention, self).__init__()
         self.device = registry.get_args("device")
         self.writer = registry.get_writer("common")
         self.config = registry.get_config("model_attributes")
@@ -170,9 +172,9 @@ class ScaledDotProductAttention(nn.Module):
         q_len = queries.size(1)
         k_len = keys.size(1)
 
-        Q = self.q_linear(features).view(batch_size, q_len, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
-        K = self.q_linear(features).view(batch_size, k_len, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
-        V = self.q_linear(features).view(batch_size, k_len, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        Q = self.q_linear(queries).view(batch_size, q_len, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        K = self.q_linear(keys).view(batch_size, k_len, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        V = self.q_linear(values).view(batch_size, k_len, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
         
         QK = torch.bmm(
             Q, torch.transpose(K, 3, 2), 
@@ -187,18 +189,17 @@ class ScaledDotProductAttention(nn.Module):
         return modified_att
 
         
-        
-
-
-
 
 # ================ ViConstituentModule =============================
 class ViConstituentModule(nn.Module):
-    def __init__(self):
-        self.device = registry.get_args("device")
-        self.writer = registry.get_writer("common")
-        self.config = registry.get_config("model_attributes")
-        self.constituent_config = self.config["constituent_module"]
+    def __init__(
+            self, 
+            config,
+             
+        ):
+        super(ViConstituentModule, self).__init__()
+
+        self.constituent_config = config
         self.num_ocr = self.config["ocr"]["num_ocr"]
         self.hidden_state = self.config["hidden_state"]
         self.num_heads = self.constituent_config["num_heads"]
@@ -211,7 +212,7 @@ class ViConstituentModule(nn.Module):
         self.v_linear = nn.Linear(self.hidden_size, self.num_heads * self.head_dim)
 
 
-    def forward(self, self, batch, ocr_features, ocr_features_mask):
+    def forward(self, batch, ocr_features, ocr_features_mask, prior):
         """
             Args:
                 ocr_features (BS, M, hidden_size) 
@@ -220,15 +221,15 @@ class ViConstituentModule(nn.Module):
         batch_size = ocr_features.size(0)
         num_ocr = ocr_features.size(1)
 
-        Q = self.q_linear(ocr_features).view(batch_size, M, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
-        K = self.q_linear(ocr_features).view(batch_size, M, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
-        V = self.q_linear(ocr_features).view(batch_size, M, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
+        Q = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
+        K = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
+        # V = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
 
         #-- Constituent Module
         prev_word_mask = torch.diag(torch.ones(num_ocr - 1), 1).long().to(self.device)
         main_diag_mask = torch.diag(torch.ones(num_ocr), 0).long().to(self.device)
         next_word_mask = torch.diag(torch.ones(num_ocr - 1), -1).long().to(self.device)
-        prev_next_word_mask = prev_word_index + next_word_index # Annotate which word is prev and next word
+        prev_next_word_mask = prev_word_mask + next_word_mask # Annotate which word is prev and next word
 
         neibor_attn_mask = torch.logical_and(
             prev_next_word_mask, # (BS, M, M) 
@@ -245,12 +246,38 @@ class ViConstituentModule(nn.Module):
         neibor_attn = prior + (1. - prior) * neibor_attn # (BS, num_heads, M, M)
 
             #~ Cummulative sum
-        tri_matrix = torch.triu(torch.ones(seq_len, seq_len), diagonal = 0).float().to(self.device)
+        tri_matrix = torch.triu(torch.ones(num_ocr, num_ocr), diagonal = 0).float().to(self.device)
         tri_matrix = tri_matrix.unsqueeze(0).unsqueeze(0)
         t = torch.log(neibor_attn + 1e-9).masked_fill(prev_word_mask == 0, 0).matmul(tri_matrix)
         g_attn = tri_matrix.matmul(t).exp().masked_fill((tri_matrix.int() - main_diag_mask) == 0, 0)
         g_attn = g_attn + g_attn.transpose(-2, -1) + neibor_attn.masked_fill(main_diag_mask == 0, 1e-4)            
-        return g_attn, neibor_attn
+        return g_attn, neibor_attn # (BS, num_heads, M, M), (BS, num_heads, M, M)
 
 
-        
+class PositionwiseFeedForward(nn.Module):
+    """Implements FFN equation."""
+    def __init__(self, d_model, d_ff, dropout=0.1):
+        super(PositionwiseFeedForward, self).__init__()
+        self.w_1 = nn.Linear(d_model, d_ff)
+        self.w_2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x):
+        return self.w_2(self.dropout(F.gelu(self.w_1(x))))
+
+
+class SublayerConnection(nn.Module):
+    """
+        A residual connection followed by a layer norm.
+        Note for code simplicity the norm is first as opposed to last.
+    """
+    def __init__(self, size, dropout):
+        super(SublayerConnection, self).__init__()
+        self.norm = nn.LayerNorm(size)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, sublayer):
+        """
+            Apply residual connection to any sublayer with the same size.
+        """
+        return x + self.dropout(sublayer(self.norm(x)))

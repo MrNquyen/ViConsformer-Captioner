@@ -18,18 +18,21 @@ model_attributes:
   hidden_size: 768
   feature_dim: 2048 # d
 
-  spatial_circle_position:
-    num_grid_patches: 11
-    num_distances: 32
-    num_heads: 12
-
-  constituent_module:
-    num_heads: 12
-  
   ocr:
     dim: 256
     num_ocr: 100
-  
+    spatial_circle_position:
+      num_grid_patches: 11
+      num_distances: 32
+      num_heads: 12
+    constituent_module:
+      num_heads: 3
+    self_attn:
+      num_heads: 2
+    poswise_ffn:
+      ffn_dim: 512
+      dropout: 0.1
+
   obj:
     dim: 320
     num_obj: 100
@@ -39,9 +42,6 @@ model_attributes:
     nhead: 12
     max_length: 50
     dropout: 0.1
-
-  vi_constituent_module:
-    pass: 512
   
   adjust_optimizer:
     lr_scale: 0.1 # scale lr for finetuning modules
