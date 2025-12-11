@@ -17,14 +17,6 @@ class ViInforgraphicDataset(Dataset):
         ocr_feat_dir, obj_feat_dir = dataset_config["image_features"][split].split(", ")
         imdb_path = dataset_config["imdb_files"][split]
 
-        depth_feat_dir = dataset_config["depth_features"]
-        ocr_depth_dir = depth_feat_dir["ocr_depth"]
-        obj_depth_dir = depth_feat_dir["obj_depth"]
-
-        clip_feat_dir = dataset_config["clip_features"]
-        clip_image_feat_dir = clip_feat_dir["images_features"]
-
-
         #-- Load data
         imdb = load_npy(imdb_path)
         self.data = []
@@ -35,17 +27,11 @@ class ViInforgraphicDataset(Dataset):
             #-- Load features path
             ocr_feat_path = os.path.join(ocr_feat_dir, f"{im_id}.npy")
             obj_feat_path = os.path.join(obj_feat_dir, f"{im_id}.npy")
-            ocr_depth_feat_path = os.path.join(ocr_depth_dir, f"{im_id}.npy")
-            obj_depth_feat_path = os.path.join(obj_depth_dir, f"{im_id}.npy")
-            clip_image_feat_path = os.path.join(clip_image_feat_dir, f"{im_id}.npy")
-
+            
             #-- Load features            
             ocr_feat = load_npy(ocr_feat_path)
             obj_feat = load_npy(obj_feat_path)
-            ocr_depth_feat = load_npy(ocr_depth_feat_path)
-            obj_depth_feat = load_npy(obj_depth_feat_path)
-            clip_image_feat = load_npy(clip_image_feat_path)
-
+            
             #-- Load data
             self.data.append({
                 "id": im_id,

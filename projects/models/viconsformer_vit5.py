@@ -1,4 +1,5 @@
 import torch
+import copy
 import fasttext
 import math
 import numpy as np
@@ -6,7 +7,7 @@ from torch import nn
 from PIL import Image
 from icecream import ic
 from torch.nn import functional as F
-from projects.vit5_modules_new.multimodal_embedding import OBJEmbedding, OCREmbedding, Sync
+from projects.vit5_modules_new.multimodal_embedding import Sync
 from projects.vit5_modules_new.encoder import ViConsformerEncoder 
 from projects.vit5_modules_new.decoder_mmt import Decoder 
 from projects.vit5_modules_new.tokenizer import WordTokenizer 
@@ -100,6 +101,10 @@ class ViConsformer(BaseModel):
         self.model_decoder = self.model.decoder
         self.model_classifier = self.model.lm_head
 
+        self.encoder_config = copy.deepcopy(config)
+        self.encoder_config.is_decoder = False
+        self.encoder_config.use_cache = False
+        self.encoder_config.is_encoder_decoder = False
         self.encoder_embed_tokens_layer = self.model_encoder.embed_tokens
         self.encoder_block_layer = self.model_encoder.block
 
@@ -120,6 +125,7 @@ class ViConsformer(BaseModel):
         self.classifier = Classifier(self.model_classifier)
         self.word_tokenizer = WordTokenizer(self.tokenizer)
         self.encoder = ViConsformerEncoder(
+            config=self.encoder_config,
             word_tokenizer=self.word_tokenizer,
             encoder_embed_tokens_layer=self.encoder_embed_tokens_layer,
             encoder_block_layer=self.encoder_block_layer
@@ -260,14 +266,14 @@ class ViConsformer(BaseModel):
 
             #~: Labels:     Tôi  là  AI  .  <EOS>
         labels_input_ids = caption_input_ids.clone()
-        labels_input_ids[labels_input_ids == self.encoder_caption.get_pad_token_id()] = -100
+        labels_input_ids[labels_input_ids == self.word_tokenizer.get_pad_token_id()] = -100
 
         #-- Training and Inference
         if self.training:
             #~ Decoder input: shift right (prepend pad_token, remove last token)
             #~ Example: [Tôi, là, AI, ., <eos>] -> [<pad>, Tôi, là, AI, .]
             shift_decoder_input_ids = self.decoder._shift_right(caption_input_ids.clone())
-            decoder_attention_mask = (shift_decoder_input_ids != self.encoder_caption.get_pad_token_id()).long()
+            decoder_attention_mask = (shift_decoder_input_ids != self.word_tokenizer.get_pad_token_id()).long()
 
             results = self.forward_mmt(
                 encoder_output_embed=encoder_output_embed,
@@ -280,8 +286,8 @@ class ViConsformer(BaseModel):
             return scores, caption_input_ids, labels_input_ids
         else:
             #~ Greedy Search
-            eos_id = self.encoder_caption.get_eos_token_id()
-            pad_id = self.encoder_caption.get_pad_token_id()
+            eos_id = self.word_tokenizer.get_eos_token_id()
+            pad_id = self.word_tokenizer.get_pad_token_id()
 
             with torch.no_grad():
                 scores = torch.zeros((batch_size, self.max_dec_length, vocab_size), device=self.device)

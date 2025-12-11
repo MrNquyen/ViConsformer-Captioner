@@ -1,7 +1,6 @@
 from utils.flags import Flags
 from utils.configs import Config
 from utils.utils import load_yml
-from projects.models.device_model import DEVICE
 from utils.trainer_vit5_epoch import Trainer
 
 

@@ -51,4 +51,38 @@ class WordTokenizer:
 
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
         return inputs # 'input_ids', 'token_type_ids', 'attention_mask'
+    
+    #-- Decode
+    def batch_decode(self, pred_inds):
+        return self.tokenizer.batch_decode(pred_inds, skip_special_tokens=True)
+
+    #-- Common function
+    def get_vocab_size(self):
+        return len(self.tokenizer.get_vocab())
+
+    #-- Get token
+    def get_pad_token(self):
+        return self.tokenizer.pad_token
+    
+    def get_unk_token(self):
+        return self.tokenizer.unk_token
+    
+    def get_cls_token(self):
+        return self.tokenizer.cls_token
+    
+    def get_eos_token(self):
+        return self.tokenizer.eos_token
+    
+    #-- Get token id
+    def get_pad_token_id(self):
+        return self.tokenizer.pad_token_id
+    
+    def get_unk_token_id(self):
+        return self.tokenizer.unk_token_id
+    
+    def get_cls_token_id(self):
+        return self.tokenizer.cls_token_id
+    
+    def get_eos_token_id(self):
+        return self.tokenizer.eos_token_id
 

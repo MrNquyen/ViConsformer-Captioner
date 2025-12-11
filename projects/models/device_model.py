@@ -7,8 +7,8 @@ from PIL import Image
 from icecream import ic
 from transformers import CLIPProcessor, CLIPModel
 from torch.nn import functional as F
-from projects.modules.multimodal_embedding import ObjEmbedding, OCREmbedding, Sync, WordEmbedding
-from projects.modules.decoder import EncoderAsDecoder 
+from projects.vit5_modules_new.multimodal_embedding import ObjEmbedding, OCREmbedding, Sync, WordEmbedding
+from projects.vit5_modules_new.decoder_mmt import EncoderAsDecoder 
 from utils.configs import Config
 from utils.registry import registry
 from utils.module_utils import _batch_padding, _batch_padding_string

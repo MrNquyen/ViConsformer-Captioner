@@ -29,7 +29,7 @@ model_attributes:
     constituent_module:
       num_heads: 3
     self_attn:
-      num_heads: 2
+      num_heads: 3
     poswise_ffn:
       ffn_dim: 512
       dropout: 0.1

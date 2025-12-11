@@ -1,9 +1,9 @@
 import torch
 import math
+import math
 from torch import nn
 from torch.nn import functional as F
-from vit5_modules.base import BaseEmbedding
-
+from icecream import ic
 from utils.registry import registry
 
 # ================ SpartialCirclePosition =============================
@@ -14,7 +14,7 @@ class SpartialCirclePosition(nn.Module):
         self.device = registry.get_args("device")
         self.writer = registry.get_writer("common")
 
-        self.spatial_pos_config = self.config["spatial_circle_position"]
+        self.spatial_pos_config = self.config["ocr"]["spatial_circle_position"]
         self.num_grid_patches = self.spatial_pos_config["num_grid_patches"]
         self.num_distances = self.spatial_pos_config["num_distances"]
         self.num_heads = self.spatial_pos_config["num_heads"]
@@ -72,7 +72,7 @@ class SpartialCirclePosition(nn.Module):
 
         #-- Setting lower, upper bounds for width and height
         #-- Lowest height and width is 0
-        patch_indexs = torch.arange(start=0, end=num_grid_patches, step=1) # Index of patch on grid
+        patch_indexs = torch.arange(start=0, end=num_grid_patches, step=1).to(self.device) # Index of patch on grid
         patch_indexs = patch_indexs.unsqueeze(0).repeat(batch_size, 1)
         lower_patch_indexs = patch_indexs[:, :-1]
         upper_patch_indexs = patch_indexs[:, 1:]
@@ -128,7 +128,7 @@ class SpartialCirclePosition(nn.Module):
         K = self.q_linear(features).view(batch_size, M, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
         V = self.q_linear(features).view(batch_size, M, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
 
-        QK = torch.bmm(
+        QK = torch.matmul(
             Q, torch.transpose(K, 3, 2), 
         ) # BS, num_heads, M, M
         A = QK / math.sqrt(self.head_dim)
@@ -136,8 +136,9 @@ class SpartialCirclePosition(nn.Module):
         spatial_A = torch.softmax(spatial_A, dim=-1) # BS, num_heads, M, M
         
         spatial_att = torch.matmul(spatial_A, V) # BS, num_heads, M, head_dim
-        spatial_att = spatial_att.permute(0, 2, 1, 3).view(batch_size, M, self.num_heads * self.head_dim) # BS, M, hidden_size
-        spatial_att = spatial_att.masked_fill(features_mask == 0, self._mask_value)
+
+        spatial_att = spatial_att.permute(0, 2, 1, 3).contiguous().view(batch_size, M, self.num_heads * self.head_dim) # BS, M, hidden_size
+        spatial_att = spatial_att.masked_fill(features_mask.unsqueeze(-1) == 0, self._mask_value)
         return spatial_att
 
 
@@ -155,9 +156,9 @@ class ScaledDotProductAttention(nn.Module):
 
         assert self.d_model % self.num_heads == 0
         self.head_dim = self.d_model // self.num_heads
-        self.q_linear = nn.Linear(self.hidden_size, self.num_heads * self.head_dim)
-        self.k_linear = nn.Linear(self.hidden_size, self.num_heads * self.head_dim)
-        self.v_linear = nn.Linear(self.hidden_size, self.num_heads * self.head_dim)
+        self.q_linear = nn.Linear(d_model, self.num_heads * self.head_dim)
+        self.k_linear = nn.Linear(d_model, self.num_heads * self.head_dim)
+        self.v_linear = nn.Linear(d_model, self.num_heads * self.head_dim)
 
     
     def forward(
@@ -176,31 +177,33 @@ class ScaledDotProductAttention(nn.Module):
         K = self.q_linear(keys).view(batch_size, k_len, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
         V = self.q_linear(values).view(batch_size, k_len, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
         
-        QK = torch.bmm(
+        QK = torch.matmul(
             Q, torch.transpose(K, 3, 2), 
         ) # BS, num_heads, q_len, k_len
         A = QK / math.sqrt(self.head_dim)
-        modified_A = A + attn_gate.permute(0, 3, 2, 1) # BS, num_heads, q_len, k_len
-        modified_A = modified_A.masked_fill(attn_mask == 0, self._mask_value)
+
+        modified_A = A + attn_gate # BS, num_heads, q_len, k_len
+        modified_A = modified_A.masked_fill(attn_mask.unsqueeze(1).unsqueeze(1) == 0, self._mask_value)
         modified_A = torch.softmax(modified_A, dim=-1) # BS, num_heads, q_len, k_len
         
         modified_att = torch.matmul(modified_A, V) # BS, num_heads, q_len, head_dim
-        modified_att = modified_att.permute(0, 2, 1, 3).view(batch_size, q_len, self.num_heads * self.head_dim) # BS, q_len, hidden_size
+        modified_att = modified_att.permute(0, 2, 1, 3).contiguous().view(batch_size, q_len, self.num_heads * self.head_dim) # BS, q_len, hidden_size
         return modified_att
 
         
 
 # ================ ViConstituentModule =============================
 class ViConstituentModule(nn.Module):
-    def __init__(
-            self, 
-            config,
-        ):
+    def __init__(self):
         super(ViConstituentModule, self).__init__()
+        self.config = registry.get_config("model_attributes")
+        self.ocr_config = self.config["ocr"]
+        self.device = registry.get_args("device")
+        self.writer = registry.get_writer("common")
 
-        self.constituent_config = config
-        self.num_ocr = self.config["ocr"]["num_ocr"]
-        self.hidden_state = self.config["hidden_state"]
+        self.hidden_size = self.config["hidden_size"]
+        self.num_ocr = self.ocr_config["num_ocr"]
+        self.constituent_config = self.ocr_config["constituent_module"]
         self.num_heads = self.constituent_config["num_heads"]
 
         self.head_dim = self.hidden_size // self.num_heads
@@ -211,7 +214,7 @@ class ViConstituentModule(nn.Module):
         self.v_linear = nn.Linear(self.hidden_size, self.num_heads * self.head_dim)
 
 
-    def forward(self, batch, ocr_features, ocr_features_mask, prior):
+    def forward(self, ocr_features, ocr_features_mask, prior):
         """
             Args:
                 ocr_features (BS, M, hidden_size) 
@@ -220,9 +223,9 @@ class ViConstituentModule(nn.Module):
         batch_size = ocr_features.size(0)
         num_ocr = ocr_features.size(1)
 
-        Q = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
-        K = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
-        # V = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_states 
+        Q = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_sizes 
+        K = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_sizes 
+        # V = self.q_linear(ocr_features).view(batch_size, num_ocr, self.num_heads, self.head_dim).permute(0, 2, 1, 3) # BS, num_heads, M, hidden_sizes 
 
         #-- Constituent Module
         prev_word_mask = torch.diag(torch.ones(num_ocr - 1), 1).long().to(self.device)
@@ -235,10 +238,11 @@ class ViConstituentModule(nn.Module):
             ocr_features_mask.unsqueeze(1) # (BS, 1, M) 
         ) # (BS, M, M)
 
-        neibor_attn = torch.bmm(
+        neibor_attn = torch.matmul(
             Q, K.transpose(3, 2)
-        ) / self.head_dim
-        neibor_attn = neibor_attn.masked_fill(neibor_attn_mask == 0, self._mask_value)
+        ) / math.sqrt(self.head_dim)
+
+        neibor_attn = neibor_attn.masked_fill(neibor_attn_mask.unsqueeze(1) == 0, self._mask_value)
         neibor_attn = torch.softmax(neibor_attn, dim=-1) # (BS, num_heads, M, M)
             #~ Nhân cho đối xứng của nó - Tuy nhiên sẽ tạo ra 2 lần nhân đối xứng => Cần chia 2 khi cummulative sum
         neibor_attn = torch.sqrt(neibor_attn * neibor_attn.transpose(3, 2)+ self.eps) # Avoid sqrt for 0

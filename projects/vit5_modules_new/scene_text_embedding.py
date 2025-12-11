@@ -1,13 +1,13 @@
 import torch
 from torch import nn
-from vit5_modules.base import BaseEmbedding
+from projects.vit5_modules_new.multimodal_embedding import BaseEmbedding
 from transformers.models.t5.modeling_t5 import T5LayerNorm
 
 class SceneTextEmbedding(BaseEmbedding):
     def __init__(self, ):
-        super().init()
-        self.layernorm_feat = nn.T5LayerNorm(self.hidden_size)
-        self.layernorm_box = nn.T5LayerNorm(self.hidden_size)
+        super().__init__()
+        self.layernorm_feat = T5LayerNorm(self.hidden_size)
+        self.layernorm_box = T5LayerNorm(self.hidden_size)
 
         self.linear_feat = nn.Linear(
             in_features=self.hidden_size,
@@ -33,7 +33,6 @@ class SceneTextEmbedding(BaseEmbedding):
     ):
         list_ocr_boxes = batch["list_ocr_boxes"]
         list_ocr_feat = batch["list_ocr_feat"]
-        list_ocr_mask
 
         linear_box_out = self.layernorm_box(self.linear_box(list_ocr_boxes))
         linear_feat_out = self.layernorm_feat(self.linear_feat(list_ocr_feat))

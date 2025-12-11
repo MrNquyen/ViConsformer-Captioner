@@ -2,19 +2,16 @@ import torch
 import copy
 from torch import nn
 from typing import List
+from torch.nn import functional as F
 
 from tqdm import tqdm
 from time import time
 from icecream import ic
 
-from vit5_modules_new.scene_text_embedding import SceneTextEmbedding
-from vit5_modules_new.attention import (
+from projects.vit5_modules_new.attention import (
     ViConstituentModule, 
     ScaledDotProductAttention, 
 )
-
-from vit5_modules_new.image_embedding import ImageEmbedding
-
 from utils.registry import registry
 
 
@@ -23,7 +20,7 @@ def clones(module, N):
     """
         Produce N identical layers.
     """
-    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+    return nn.ModuleList([module for _ in range(N)])
 
 
 class Sync(nn.Module):
@@ -52,10 +49,10 @@ class Sync(nn.Module):
 class BaseEmbedding(nn.Module):
     def __init__(self):
         super().__init__()
-        self.config = registry.get_config("model_attributes")
+        self.model_config = registry.get_config("model_attributes")
         self.device = registry.get_args("device")
-        self.hidden_size = self.config["hidden_size"]
-        self.common_dim = self.config["feature_dim"]
+        self.hidden_size = self.model_config["hidden_size"]
+        self.common_dim = self.model_config["feature_dim"]
 
         self.gelu = nn.GELU()
         self.dropout = nn.Dropout(0.1)
@@ -79,7 +76,7 @@ class SublayerConnection(nn.Module):
         A residual connection followed by a layer norm.
         Note for code simplicity the norm is first as opposed to last.
     """
-    def __init__(self, size, dropout):
+    def __init__(self, size, dropout=0.1):
         super(SublayerConnection, self).__init__()
         self.dropout = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(size)
@@ -109,7 +106,7 @@ class OCREncoderLayer(BaseEmbedding):
         )
         self.constituent_module = ViConstituentModule()
         self.layer_connection = clones(
-            module=SublayerConnection(size=self.hidden_state),
+            module=SublayerConnection(size=self.hidden_size),
             N=2
         )
         
@@ -149,7 +146,7 @@ class OCREncoder(BaseEmbedding):
             module=OCREncoderLayer(), 
             N=3
         )
-        self.layer_norm = nn.LayerNorm(self.hidden_state)
+        self.layer_norm = nn.LayerNorm(self.hidden_size)
 
     def forward(self, ocr_features, ocr_mask):
         attn_gate = 0. #-- Init 0 at fist, when pass through OCREncoderLayer -> Turn to tensor BS, 1, M, M with head
@@ -169,7 +166,7 @@ class OCREncoder(BaseEmbedding):
 #============== Obj Embedding ================
 class OBJEncoder(BaseEmbedding):
     def __init__(self):
-        super().init()
+        super().__init__()
         self.layernorm_feat = nn.LayerNorm(self.hidden_size)
         self.linear_feat = nn.Linear(
             in_features=self.hidden_size,

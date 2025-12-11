@@ -1,19 +1,30 @@
 import torch
-
+from icecream import ic
+from dataclasses import dataclass
 from typing import Optional, List
 from torch import nn
-from vit5_modules.attention import SpartialCirclePosition
-
-from vit5_modules.scene_text_embedding import SceneTextEmbedding
-from vit5_modules_new.tokenizer import WordTokenizer
-from vit5_modules.multimodal_embedding import OCREncoder, OBJEncoder
+from projects.vit5_modules_new.attention import SpartialCirclePosition
+from projects.vit5_modules_new.scene_text_embedding import SceneTextEmbedding
+from projects.vit5_modules_new.tokenizer import WordTokenizer
+from projects.vit5_modules_new.multimodal_embedding import OCREncoder, OBJEncoder
+# from transformers.cache_utils import DynamicCache, Cache
+from transformers.masking_utils import create_causal_mask
+from transformers.modeling_outputs import ModelOutput
 from transformers.models.t5.modeling_t5 import *
+from transformers.models.t5.modeling_t5 import (
+    Cache,
+    T5Stack,
+    DynamicCache,
+    EncoderDecoderCache,
+    BaseModelOutputWithPastAndCrossAttentions,
+
+)
 from utils.registry import registry
 
-
-class CustomBaseModelOutputWithPastAndCrossAttentions(BaseModelOutputWithPastAndCrossAttentions):
+@dataclass
+class CustomBaseModelOutputWithPastAndCrossAttentions(ModelOutput):
     last_hidden_state: Optional[torch.FloatTensor] = None
-    past_key_values: Optional[Cache] = None
+    past_key_values: Optional[tuple] = None
     hidden_states: Optional[tuple[torch.FloatTensor, ...]] = None
     attentions: Optional[tuple[torch.FloatTensor, ...]] = None
     cross_attentions: Optional[tuple[torch.FloatTensor, ...]] = None
@@ -24,14 +35,15 @@ class CustomBaseModelOutputWithPastAndCrossAttentions(BaseModelOutputWithPastAnd
 class ViConsformerEncoder(T5Stack):
     def __init__(
         self,
+        config,
         word_tokenizer,
         encoder_embed_tokens_layer,
         encoder_block_layer
     ):
-        super(ViConsformerEncoder, self).init()
+        super(ViConsformerEncoder, self).__init__(config)
         self.writer = registry.get_writer("common")
         self.model_config = registry.get_config("model_attributes")
-        self.device = registry.get_args("device")
+        # self.device = registry.get_args("device")
         self.hidden_size = self.model_config["hidden_size"]
         self.max_length = self.model_config["max_length"]
         self.build_config()
@@ -42,6 +54,8 @@ class ViConsformerEncoder(T5Stack):
 
         self.ocr_encoder = OCREncoder()
         self.obj_encoder = OBJEncoder()
+        self.scene_text_embedding = SceneTextEmbedding()
+        self.spatial_circle_position = SpartialCirclePosition()
 
 
     def build_config(self):
@@ -77,7 +91,7 @@ class ViConsformerEncoder(T5Stack):
 
         #~ OCR Embedding
         list_ocr_tokens_string  = [" <context> ".join(ocr_tokens) for ocr_tokens in batch["list_ocr_tokens"]]
-        ocr_tokens_inputs       = self.tokenize(list_ocr_tokens_string, max_length=self.ocr_config["num_ocr"])
+        ocr_tokens_inputs       = self.word_tokenizer.tokenize(list_ocr_tokens_string, max_length=self.ocr_config["num_ocr"])
         ocr_tokens_attention_mask   = ocr_tokens_inputs["attention_mask"]
         ocr_tokens_input_ids        = ocr_tokens_inputs["input_ids"]
         ocr_tokens_embed            = self.embed_tokens(ocr_tokens_input_ids)
@@ -86,7 +100,7 @@ class ViConsformerEncoder(T5Stack):
             batch=batch, 
             ocr_tokens_embed_vit5=ocr_tokens_embed
         )
-        ocr_features = self.ocr_encoder(
+        ocr_features, stack_neibor_attn = self.ocr_encoder(
             ocr_features=ocr_features, 
             ocr_mask=ocr_tokens_attention_mask #-- Using ViT5 inputs attention mask
         )
@@ -135,15 +149,17 @@ class ViConsformerEncoder(T5Stack):
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if input_ids is not None and inputs_embeds is not None:
-            err_msg_prefix = "decoder_" if self.is_decoder else ""
-            raise ValueError(
-                f"You cannot specify both {err_msg_prefix}input_ids and {err_msg_prefix}inputs_embeds at the same time"
-            )
-        elif input_ids is not None:
-            input_shape = input_ids.size()
-            input_ids = input_ids.view(-1, input_shape[-1])
-        elif inputs_embeds is not None:
+        # if input_ids is not None and inputs_embeds is not None:
+        #     err_msg_prefix = "decoder_" if self.is_decoder else ""
+        #     raise ValueError(
+        #         f"You cannot specify both {err_msg_prefix}input_ids and {err_msg_prefix}inputs_embeds at the same time"
+        #     )
+        # if input_ids is not None:
+        #     input_shape = input_ids.size()
+        #     input_ids = input_ids.view(-1, input_shape[-1])
+        # elif inputs_embeds is not None:
+        #     input_shape = inputs_embeds.size()[:-1]
+        if inputs_embeds is not None:
             input_shape = inputs_embeds.size()[:-1]
         else:
             err_msg_prefix = "decoder_" if self.is_decoder else ""
@@ -151,9 +167,6 @@ class ViConsformerEncoder(T5Stack):
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
-                logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                )
                 use_cache = False
 
         if inputs_embeds is None:
@@ -185,21 +198,21 @@ class ViConsformerEncoder(T5Stack):
             )
 
         if self.config.is_decoder:
-            attention_mask = create_causal_mask(
-                config=self.config,
-                input_embeds=inputs_embeds,
-                attention_mask=attention_mask,
-                cache_position=cache_position,
-                past_key_values=past_key_values.self_attention_cache
+            attention_mask = self._update_causal_mask(
+                attention_mask,
+                inputs_embeds,
+                cache_position,
+                past_key_values.self_attention_cache
                 if isinstance(past_key_values, EncoderDecoderCache)
                 else past_key_values,
+                output_attentions,
             )
+        elif attention_mask is not None:
+            attention_mask = attention_mask[:, None, None, :]
+            attention_mask = attention_mask.to(dtype=inputs_embeds.dtype)
+            attention_mask = (1.0 - attention_mask) * torch.finfo(inputs_embeds.dtype).min
         else:
-            attention_mask = create_bidirectional_mask(
-                config=self.config,
-                input_embeds=inputs_embeds,
-                attention_mask=attention_mask,
-            )
+            attention_mask = None
 
         encoder_extended_attention_mask = None
         if self.is_decoder and encoder_hidden_states is not None:
@@ -275,7 +288,7 @@ class ViConsformerEncoder(T5Stack):
             hidden_states=all_hidden_states,
             attentions=all_attentions,
             cross_attentions=all_cross_attentions,
-            attention_mask=attention_mask
+            attention_mask=attention_mask.squeeze(1).squeeze(1)
         )
 
     

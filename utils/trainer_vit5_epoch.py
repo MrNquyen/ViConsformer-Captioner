@@ -11,7 +11,7 @@ from icecream import ic
 from torch.optim.lr_scheduler import LambdaLR
 
 from projects.datasets.dataset import get_loader
-from projects.models.device_vit5 import DEVICE
+from projects.models.viconsformer_vit5 import ViConsformer
 from utils.configs import Config
 from utils.model_utils import get_optimizer_parameters, lr_lambda_update_epoch
 from utils.module_utils import _batch_padding, _batch_padding_string
@@ -68,7 +68,7 @@ class Trainer():
 
 
     def build_model(self):
-        self.model = DEVICE()
+        self.model = ViConsformer()
         self.model = self.model.to(self.device)
 
 
@@ -224,6 +224,11 @@ class Trainer():
         batch["list_ocr_scores"] = _batch_padding_string(batch["list_ocr_scores"], max_length=model_config["ocr"]["num_ocr"], pad_value=ocr_score_pad, return_mask=False)
         batch["list_ocr_scores"] = torch.tensor(batch["list_ocr_scores"])
 
+        batch["list_im_width"] = torch.tensor(batch["list_im_width"])
+        batch["list_im_height"] = torch.tensor(batch["list_im_height"])
+
+        # Question
+        batch["list_questions"] = ["<caption>"] * len(batch["list_ocr_tokens"])
         return batch
     
     def match_device(self, batch):
@@ -233,6 +238,8 @@ class Trainer():
         batch["list_obj_boxes"] = batch["list_obj_boxes"].to(self.device).to(torch.float)
         batch["list_obj_feat"] = batch["list_obj_feat"].to(self.device).to(torch.float)
         batch["obj_mask"] = batch["obj_mask"].to(self.device).to(torch.float)
+        batch["list_im_width"] = batch["list_im_width"].to(self.device).to(torch.float)
+        batch["list_im_height"] = batch["list_im_height"].to(self.device).to(torch.float)
         return batch
 
 
@@ -282,16 +289,6 @@ class Trainer():
                 if self.early_stop_counter >= self.early_stop_patience:
                     self.writer.LOG_INFO("Early stopping triggered.")
                     break
-                
-                self.save_model(
-                    model=self.model,
-                    loss=val_loss,
-                    optimizer=self.optimizer,
-                    lr_scheduler=self.lr_scheduler,
-                    epoch=self.current_epoch, 
-                    best_score=self.best_score,
-                    use_name=self.current_epoch
-                )
             self.save_model(
                 model=self.model,
                 loss=batch_loss,
@@ -433,7 +430,7 @@ class Trainer():
             Predict batch
         """
         # Captioning
-        captions_pred = self.model.encoder_caption.batch_decode(pred_ids)
+        captions_pred = self.model.word_tokenizer.batch_decode(pred_ids)
         return captions_pred # BS, 
     
 
