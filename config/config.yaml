@@ -56,7 +56,7 @@ training_parameters:
   epochs: 26
   batch_size: 64
   early_stopping:
-    patience: 5
+    patience: 10
   lr_scheduler:
     status: true
     type: "step"
@@ -66,7 +66,7 @@ training_parameters:
     lr_ratio: 0.1
     use_warmup: True
     warmup_iterations: 1
-    warmup_epochs: 5
+    warmup_epochs: 10
     decay_factor: 0.3
     lr_epoch_step_size: 10
   max_iterations: 9000

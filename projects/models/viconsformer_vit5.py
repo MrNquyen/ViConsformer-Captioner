@@ -105,7 +105,7 @@ class ViConsformer(BaseModel):
         self.encoder_config.is_decoder = False
         self.encoder_config.use_cache = False
         self.encoder_config.is_encoder_decoder = False
-        self.encoder_embed_tokens_layer = self.model_encoder.embed_tokens
+        self.encoder_embed_tokens_layer = self.model.shared
         self.encoder_block_layer = self.model_encoder.block
 
 
