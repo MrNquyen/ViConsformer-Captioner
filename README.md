@@ -1,4 +1,4 @@
-# Implementation for [ViConsFormer: Constituting Meaningful Phrases of Scene Texts using Transformer-based Method in Vietnamese Text-based Visual Question Answering]([https://arxiv.org/abs/2302.01540](https://aclanthology.org/2024.paclic-1.75/))
+# Implementation for [ViConsFormer: Constituting Meaningful Phrases of Scene Texts using Transformer-based Method in Vietnamese Text-based Visual Question Answering](https://aclanthology.org/2024.paclic-1.75])
 
 ## **Data Preparation**
 - Object Features: Extract YOLO on OpenImageV7
