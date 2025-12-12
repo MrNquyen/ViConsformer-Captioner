@@ -1,19 +1,12 @@
-# Implementation for [DEVICE: Depth and Visual Concepts Aware Transformer for OCR-based Image Captioning](https://arxiv.org/abs/2302.01540)
+# Implementation for [ViConsFormer: Constituting Meaningful Phrases of Scene Texts using Transformer-based Method in Vietnamese Text-based Visual Question Answering]([https://arxiv.org/abs/2302.01540](https://aclanthology.org/2024.paclic-1.75/))
 
 ## **Data Preparation**
-- Object Features: Extract FasterRCNN
+- Object Features: Extract YOLO on OpenImageV7
 - OCR Features: Extract SwinTextSpotter
-- Depth Estimation: Extract via [marigold-depth-v1-0](https://huggingface.co/prs-eth/marigold-depth-v1-0)
 
 ## Update Modules
 ```
   Completed
-```
-
-## Depth Estimation
-Using marigold-depth-v1-0
-```
-  python ./tools/extract_depth.py
 ```
 
 ## Setup
@@ -36,7 +29,7 @@ Training on your own dataset:
 Or:
 ```
   python main.py \
-    --config ./config/device_config.yaml \
+    --config ./config/config.yaml \
     --save_dir ./save \
     --run_type train \
     --device 7
@@ -51,7 +44,7 @@ Testing on trained model:
 Or:
 ```
   python tools/run.py \
-    --config ./config/device_config.yaml \
+    --config ./config/config.yaml \
     --save_dir ./save \
     --run_type inference\
     --device 7
