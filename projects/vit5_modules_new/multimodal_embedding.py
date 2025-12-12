@@ -16,11 +16,11 @@ from utils.registry import registry
 
 
 #============== Utils ================
-def clones(module, N):
+def clones(module_class, N, *args):
     """
         Produce N identical layers.
     """
-    return nn.ModuleList([module for _ in range(N)])
+    return nn.ModuleList([module_class(*args) for _ in range(N)])
 
 
 class Sync(nn.Module):
@@ -65,6 +65,13 @@ class PositionwiseFeedForward(nn.Module):
         self.w_1 = nn.Linear(d_model, d_ff)
         self.w_2 = nn.Linear(d_ff, d_model)
         self.dropout = nn.Dropout(dropout)
+        self.__()
+    
+    def __(self):
+        nn.init.xavier_uniform_(self.w_1.weight)
+        nn.init.xavier_uniform_(self.w_2.weight)
+        nn.init.zeros_(self.w_1.bias)
+        nn.init.zeros_(self.w_2.bias)
 
     def forward(self, x):
         return self.w_2(self.dropout(F.gelu(self.w_1(x))))
@@ -106,8 +113,9 @@ class OCREncoderLayer(BaseEmbedding):
         )
         self.constituent_module = ViConstituentModule()
         self.layer_connection = clones(
-            module=SublayerConnection(size=self.hidden_size),
-            N=2
+            module_class=SublayerConnection,
+            N=2,
+            size=self.hidden_size # Params for SublayerConnection
         )
         
     def build_config(self):
@@ -143,7 +151,7 @@ class OCREncoder(BaseEmbedding):
     def __init__(self):
         super(OCREncoder, self).__init__()
         self.layers = clones(
-            module=OCREncoderLayer(), 
+            module_class=OCREncoderLayer, 
             N=3
         )
         self.layer_norm = nn.LayerNorm(self.hidden_size)
@@ -160,7 +168,9 @@ class OCREncoder(BaseEmbedding):
             )
             stack_neibor_attn.append(neibor_attn)
         stack_neibor_attn = torch.concat(stack_neibor_attn, dim=1)
+        semantic_ocr_features = self.layer_norm(semantic_ocr_features)
         return semantic_ocr_features, stack_neibor_attn
+
 
 
 #============== Obj Embedding ================
@@ -172,12 +182,19 @@ class OBJEncoder(BaseEmbedding):
             in_features=self.hidden_size,
             out_features=self.hidden_size
         )
-
         self.layernorm_box = nn.LayerNorm(self.hidden_size)
         self.linear_box = nn.Linear(
             in_features=4,
             out_features=self.hidden_size
         )
+        self._init_weights()
+
+
+    def _init_weights(self):
+        nn.init.xavier_uniform_(self.linear_feat.weight)
+        nn.init.xavier_uniform_(self.linear_box.weight)
+        nn.init.zeros_(self.linear_feat.bias)
+        nn.init.zeros_(self.linear_box.bias)
 
 
     def forward(self, batch):
